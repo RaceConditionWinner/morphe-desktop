@@ -35,9 +35,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.morphe.gui.ui.components.MorpheBadge
 import app.morphe.gui.ui.components.MorpheBadgeTone
-import app.morphe.gui.ui.components.cardChipInk
 import app.morphe.gui.ui.components.MorpheCardChip
-import app.morphe.gui.ui.components.LocalCardFills
+import app.morphe.gui.ui.components.LocalAppCardInk
 import app.morphe.gui.ui.components.AppCard
 import app.morphe.gui.data.model.SupportedApp
 import app.morphe.gui.ui.icons.MorpheIcons
@@ -71,25 +70,22 @@ fun SupportedAppListRow(
     modifier: Modifier = Modifier,
 ) {
     val corners = LocalMorpheCorners.current
-    val chipInk = cardChipInk
     val font = LocalMorpheFont.current
 
     val initial = app.displayName.firstOrNull()?.uppercase() ?: "?"
     val hasExperimental = app.experimentalVersions.isNotEmpty()
     val latestExperimental = app.experimentalVersions.firstOrNull()
 
-    val cardFills = LocalCardFills.current
-
     AppCard(
         modifier = modifier.fillMaxWidth(),
         cornerRadius = corners.medium,
         appIconColorHex = app.appIconColor,
-        fill = cardFills[app.packageName],
         onClick = onClick,
-        onCustomise = {
-            cardFills.requestEdit(app.packageName, app.displayName, app.appIconColor)
-        },
     ) {
+        // Read inside the card, which is where the resolved ink is provided
+        val ink = LocalAppCardInk.current
+        val chipInk = ink.chipContent
+
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -102,8 +98,8 @@ fun SupportedAppListRow(
                 modifier = Modifier
                     .size(40.dp)
                     .clip(RoundedCornerShape(corners.small))
-                    .border(1.dp, Color.White.copy(alpha = 0.35f), RoundedCornerShape(corners.small))
-                    .background(Color.White.copy(alpha = 0.06f)),
+                    .border(1.dp, ink.outline, RoundedCornerShape(corners.small))
+                    .background(ink.chipContent.copy(alpha = 0.06f)),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
@@ -111,7 +107,7 @@ fun SupportedAppListRow(
                     fontSize = 17.sp,
                     fontWeight = FontWeight.Bold,
                     fontFamily = font,
-                    color = Color.White,
+                    color = ink.title,
                 )
             }
             Spacer(Modifier.width(10.dp))
@@ -121,7 +117,7 @@ fun SupportedAppListRow(
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                     fontFamily = font,
-                    color = Color.White,
+                    color = ink.title,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -130,7 +126,7 @@ fun SupportedAppListRow(
                     fontSize = 10.sp,
                     fontFamily = font,
                     fontWeight = FontWeight.Normal,
-                    color = Color.White.copy(alpha = 0.6f),
+                    color = ink.subtitle,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -179,12 +175,13 @@ fun SupportedAppListRow(
 /** Optional device-layer line: whether the app is installed on the connected device. */
 @Composable
 private fun DeviceInfoLine(info: DeviceAppInfo, font: FontFamily) {
+    val ink = LocalAppCardInk.current
     val version = info.installedVersion?.let { " · v${it.removePrefix("v")}" } ?: ""
     val (text, color) = when {
-        !info.installed -> "Not on this device" to Color.White.copy(alpha = 0.5f)
+        !info.installed -> "Not on this device" to ink.title.copy(alpha = 0.5f)
         // Installed but signed by a different cert → replaced/re-signed outside Morphe.
         info.signedByMorphe == false -> "On device$version · not Morphe-signed" to Color(0xFFE0504D) // red
-        else -> "On device$version" to Color.White // ours, or signature undetermined
+        else -> "On device$version" to ink.title // ours, or signature undetermined
     }
     Text(
         text = text,

@@ -6,6 +6,7 @@
 package app.morphe.gui.ui.screens.quick
 
 import app.morphe.engine.MorpheData
+import app.morphe.engine.OriginalApkRepository
 import app.morphe.engine.PatchedAppStore
 import app.morphe.engine.UpdateChecker
 import app.morphe.engine.UpdateInfo
@@ -64,6 +65,7 @@ class QuickPatchViewModel(
     private val updateCheckRepository: UpdateCheckRepository,
     private val patchedAppStore: PatchedAppStore = PatchedAppStore.shared,
     private val seenPatchesRepository: SeenPatchesRepository = SeenPatchesRepository(),
+    private val originalApkRepository: OriginalApkRepository = OriginalApkRepository(),
 ) : ScreenModel {
 
     private var patchRepository: PatchRepository = patchSourceManager.getActiveRepositorySync()
@@ -656,7 +658,7 @@ class QuickPatchViewModel(
             val names = patchService.listPatches(path, packageName).getOrNull()
                 ?.mapTo(mutableSetOf()) { it.name }
                 ?: return@forEach
-            seenPatchesRepository.save(packageName, resolved.source.name, names)
+            seenPatchesRepository.save(packageName, resolved.source.id, names)
         }
     }
 
@@ -714,6 +716,12 @@ class QuickPatchViewModel(
                     patchedAt = System.currentTimeMillis(),
                     patchedWithMorpheVersion = UpdateChecker.currentVersion() ?: "unknown",
                 )
+            )
+            // Best-effort, same contract as this whole function.
+            originalApkRepository.saveOriginalApk(
+                packageName = pkg,
+                version = manifest?.versionName?.takeIf { it.isNotBlank() } ?: result.packageVersion,
+                sourceFile = File(inputApkPath),
             )
         } catch (e: Exception) {
             Logger.error("Failed to record patched app (quick mode)", e)

@@ -58,10 +58,15 @@ fun MorpheCardChip(
     val isHovered by hover.collectIsHoveredAsState()
     val interactive = onClick != null
 
-    // A card fill is always dark. Off a card the surface decides: white ink over a
-    // white wash vanishes on a light theme, so only a dark surface gets the card look.
+    // On a card the fill decides, and the card has already worked out what reads on it. Off a
+    // card the surface decides: white ink over a white wash vanishes on a light theme, so only a
+    // dark surface gets the card look.
     val onDark = onCard || MaterialTheme.colorScheme.surface.luminance() < 0.5f
-    val ink = if (onDark) Color.White else MaterialTheme.colorScheme.onSurface
+    val ink = when {
+        onCard -> LocalAppCardInk.current.chipContent
+        onDark -> Color.White
+        else -> MaterialTheme.colorScheme.onSurface
+    }
     val fill by animateColorAsState(
         ink.copy(
             alpha = if (onDark) {

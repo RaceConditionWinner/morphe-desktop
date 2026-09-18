@@ -63,7 +63,9 @@ fun MorpheBadge(
     onGradient: Boolean = false,
 ) {
     val corner = RoundedCornerShape(LocalMorpheCorners.current.small)
-    val fill = if (onGradient) containerColor.onCardGradient() else containerColor
+    // On a card the caller passes the card's own resolved content color, which is already the
+    // right polarity for that fill, so the badge takes it as given and inks against it
+    val fill = containerColor
     val ink = if (onGradient) fill.contrastingForeground() else contentColor
     Box(
         modifier = modifier

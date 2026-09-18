@@ -8,6 +8,7 @@ package app.morphe.gui.ui.screens.home
 import app.morphe.engine.MorpheData
 import app.morphe.engine.MultiSourceLoader
 import app.morphe.engine.PatchEngine.Config.Companion.DEFAULT_KEYSTORE_ALIAS
+import app.morphe.engine.OriginalApkRepository
 import app.morphe.engine.PatchedAppStore
 import app.morphe.engine.UpdateInfo
 import app.morphe.engine.model.PatchedAppRecord
@@ -61,6 +62,7 @@ class HomeViewModel(
     private val updateCheckRepository: UpdateCheckRepository,
     private val patchedAppStore: PatchedAppStore,
     private val changelogRepository: ChangelogRepository,
+    private val originalApkRepository: OriginalApkRepository,
     private val adbManager: AdbManager = AdbManager(),
 ) : ScreenModel {
 
@@ -115,6 +117,14 @@ class HomeViewModel(
         // so badges + device state update immediately. No leave-and-return needed.
         screenModelScope.launch {
             patchedAppStore.changes.collect { refreshPatchedState() }
+        }
+
+        // Best-effort, once per app launch: drop original-APK records whose file
+        // is gone (deleted outside the app, moved disk, etc.) and clean up any
+        // `.part` staging file an interrupted save left behind — see
+        // OriginalApkRepository.pruneMissingApks. Never blocks startup on this.
+        screenModelScope.launch {
+            runCatching { originalApkRepository.pruneMissingApks() }
         }
 
         // Optional device layer: when the selected ADB device changes (connect,
@@ -498,6 +508,22 @@ class HomeViewModel(
         patchedRecordsByPackage[packageName]
 
     /**
+     * The archived original APK for [packageName]'s input, if one was retained
+     * (see [OriginalApkRepository]) and its file is still present on disk. Used
+     * by the repatch flow when [PatchedAppRecord.inputApkPath] no longer exists
+     * (the user's own copy was moved/deleted) — a fallback to asking the user
+     * to re-select the file, not a replacement for it: this can itself return
+     * null (retention disabled, or the archived copy has since gone missing
+     * too), in which case the caller still needs that manual fallback.
+     */
+    suspend fun findOriginalApkPath(packageName: String): String? {
+        val archived = originalApkRepository.get(packageName) ?: return null
+        if (!File(archived.filePath).exists()) return null
+        originalApkRepository.markUsed(packageName)
+        return archived.filePath
+    }
+
+    /**
      * Compute per-source patch-file freshness + app-version freshness for [record],
      * comparing the snapshot it was patched with against the currently resolved
      * sources and the supported app's recommended/experimental versions. The app
@@ -555,18 +581,18 @@ class HomeViewModel(
             // (empty) entry per enabled bundle, so an enabled-but-unused source has an
             // empty set → drop it. Null = key mismatch/old record → keep (don't hide).
             .filter { snap ->
-                val sel = record.patchSelectionByBundle[snap.sourceName]
+                val sel = record.patchSelectionByBundle[snap.sourceId]
                 sel == null || sel.isNotEmpty()
             }
             .map { snap ->
-                val latest = latestBySource[snap.sourceName]
+                val latest = latestBySource[snap.sourceId]
                 RecallUpdateInfo.SourceUpdate(
                     name = snap.sourceName,
                     usedVersion = snap.version,
-                    resolvedVersion = resolvedBySource[snap.sourceName],
+                    resolvedVersion = resolvedBySource[snap.sourceId],
                     latestAvailableVersion = latest,
                     outdated = isNewerVersion(latest, snap.version),
-                    hasRelevantChanges = snap.sourceName in changedSources,
+                    hasRelevantChanges = snap.sourceId in changedSources,
                 )
             }
         val app = apps.find { it.packageName == record.packageName }
@@ -650,18 +676,22 @@ class HomeViewModel(
     private fun sortedPatchedRecords(): List<PatchedAppRecord> =
         patchedRecordsByPackage.values.sortedByDescending { it.patchedAt }
 
-    /** source name → version currently resolved/downloaded (what Re-patch uses now). */
+    /** source id → version currently resolved/downloaded (what Re-patch uses now).
+     *  Keyed by the source's stable id, not its display name — compared against
+     *  PatchedAppRecord.sourcesSnapshot, which persists across sessions, so a
+     *  renameable name is the wrong join key here (see PatchPreferencesRepository's
+     *  class doc for the general reasoning). */
     private fun resolvedVersionBySource(): Map<String, String?> =
         cachedSourcesResult?.resolved
             ?.filter { it.patchFile != null }
-            ?.associate { it.source.name to it.resolvedVersion }
+            ?.associate { it.source.id to it.resolvedVersion }
             ?: emptyMap()
 
-    /** source name → newest available version (falls back to resolved when unknown/offline). */
+    /** source id → newest available version (falls back to resolved when unknown/offline). */
     private fun latestAvailableBySource(): Map<String, String?> =
         cachedSourcesResult?.resolved
             ?.filter { it.patchFile != null }
-            ?.associate { it.source.name to (it.latestAvailableVersion ?: it.resolvedVersion) }
+            ?.associate { it.source.id to (it.latestAvailableVersion ?: it.resolvedVersion) }
             ?: emptyMap()
 
     private suspend fun computePatchedStates(
@@ -719,7 +749,7 @@ class HomeViewModel(
             .orEmpty()
     }
 
-    fun isBundleCached(sourceName: String, tag: String): Boolean {
+    suspend fun isBundleCached(sourceName: String, tag: String): Boolean {
         val repo = patchSourceManager.getEnabledRepositories()
             .firstOrNull { (source, _) -> source.name == sourceName }
             ?.second
@@ -864,26 +894,26 @@ class HomeViewModel(
         app: SupportedApp,
         latestBySource: Map<String, String?>,
     ): Set<String> {
-        val resolvedByName = cachedSourcesResult?.resolved?.associateBy { it.source.name }.orEmpty()
+        val resolvedById = cachedSourcesResult?.resolved?.associateBy { it.source.id }.orEmpty()
         val names = appNameCandidates(app)
         return buildSet {
-            for ((_, sourceName, version) in record.sourcesSnapshot) {
-                val latest = latestBySource[sourceName] ?: continue
-                if (!isNewerVersion(latest, version)) continue
+            for (snap in record.sourcesSnapshot) {
+                val latest = latestBySource[snap.sourceId] ?: continue
+                if (!isNewerVersion(latest, snap.version)) continue
 
-                val resolved = resolvedByName[sourceName]
-                if (resolved == null) { add(sourceName); continue }
+                val resolved = resolvedById[snap.sourceId]
+                if (resolved == null) { add(snap.sourceId); continue }
                 val prerelease = resolved.channel == EnabledSourcesLoader.Channel.DEV_LATEST ||
                     resolved.channel == EnabledSourcesLoader.Channel.DEV_OLDER
                 val entries = changelogRepository.entriesFor(resolved.source, prerelease)
-                if (entries == null) { add(sourceName); continue }
-                if (names.isEmpty()) { add(sourceName); continue }
+                if (entries == null) { add(snap.sourceId); continue }
+                if (names.isEmpty()) { add(snap.sourceId); continue }
 
-                if (ChangelogParser.hasChangesFor(entries, version, names)) {
-                    add(sourceName)
+                if (ChangelogParser.hasChangesFor(entries, snap.version, names)) {
+                    add(snap.sourceId)
                 } else {
                     Logger.debug(
-                        "Changelog: '$sourceName' $version -> $latest lists no scoped " +
+                        "Changelog: '${snap.sourceName}' ${snap.version} -> $latest lists no scoped " +
                             "changes for ${app.displayName} (tried ${names.joinToString(", ")}), no badge"
                     )
                 }

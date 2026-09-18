@@ -44,6 +44,7 @@ object CacheManager {
             clearContents("Patches", MorpheData.patchesDir),
             clearContents("Logs", MorpheData.logsDir),
             clearContents("Temp", MorpheData.tmpDir),
+            clearContents("Avatars", MorpheData.avatarsDir),
         ),
     )
 

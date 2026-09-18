@@ -28,7 +28,8 @@ enum class ActiveMode { QUICK, EXPERT }
  */
 class PatchSourceManager(
     private val httpClient: HttpClient,
-    private val configRepository: ConfigRepository
+    private val configRepository: ConfigRepository,
+    private val blocklistRepository: BlocklistRepository,
 ) {
     private val repositories = mutableMapOf<String, PatchRepository>()
 
@@ -73,6 +74,13 @@ class PatchSourceManager(
      * Call once at app startup (from a LaunchedEffect).
      */
     suspend fun initialize() {
+        // Load first (fast, disk-only) so isSourceBlocked/addSource enforce the
+        // last-known state even before refresh() completes; then best-effort
+        // refresh from the network. A failed refresh silently keeps the cached
+        // state — see BlocklistRepository.refresh().
+        blocklistRepository.loadFromCache()
+        blocklistRepository.refresh()
+
         configRepository.migrateSourceChannelFlags()
         val source = configRepository.getActivePatchSource()
         cachedActiveSource = source
@@ -240,9 +248,24 @@ class PatchSourceManager(
      * Add a new source. Persists and refreshes the cached snapshot.
      */
     suspend fun addSource(source: PatchSource) {
+        val blocklistKey = source.url?.let(blocklistRepository::toBlocklistKey)
+        if (blocklistKey != null && blocklistRepository.isBlocked(blocklistKey)) {
+            Logger.warn("Refused to add blocked source: $blocklistKey (${source.url})")
+            return
+        }
         configRepository.addPatchSource(source)
         refreshEnabledSources()
         _sourceVersion.value++
+    }
+
+    /**
+     * Whether [source] is currently on the remote blocklist. Exposed for the UI
+     * (e.g. to grey out / flag an already-added source that's since been
+     * blocked) — mirrors morphe-manager's `PatchBundleRepository.blockedSources`.
+     */
+    fun isSourceBlocked(source: PatchSource): Boolean {
+        val key = source.url?.let(blocklistRepository::toBlocklistKey) ?: return false
+        return blocklistRepository.isBlocked(key)
     }
 
     /**

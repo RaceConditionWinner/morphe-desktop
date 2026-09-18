@@ -104,11 +104,19 @@ class HttpService(
      * response body is never stored in memory (Pratham's chess patch is 100MB+ and that would
      * cause issues. This fixes it. Writes to a `.part` file and atomically swaps on success;
      * removes the partial file on any failure. Throws on failure after retries.
+     *
+     * [maxBytes], when set, is enforced twice: immediately against `Content-Length` if the
+     * server sends one (fails before a single body byte is read), and again as a running
+     * total while streaming (catches a response that lies about or omits `Content-Length`).
+     * Exceeding it throws [ResponseTooLargeException], which — unlike a transient network
+     * error — is never retried; a response that's too large now will still be too large on
+     * attempt 2.
      */
     suspend fun downloadToFile(
         url: String,
         saveLocation: File,
         onProgress: ((bytesRead: Long, contentLength: Long?) -> Unit)? = null,
+        maxBytes: Long? = null,
         builder: HttpRequestBuilder.() -> Unit = {},
     ): File {
         saveLocation.parentFile?.mkdirs()
@@ -120,9 +128,12 @@ class HttpService(
                     http.prepareGet(url) { builder() }.execute { response ->
                         response.throwIfError(url)
                         val contentLength = response.headers[HttpHeaders.ContentLength]?.toLongOrNull()
+                        if (maxBytes != null && contentLength != null && contentLength > maxBytes) {
+                            throw ResponseTooLargeException(url, maxBytes)
+                        }
                         withContext(Dispatchers.IO) {
                             response.bodyAsChannel().toInputStream().use { input ->
-                                copyStreaming(input, out, contentLength, onProgress)
+                                copyStreaming(input, out, contentLength, maxBytes, url, onProgress)
                             }
                         }
                     }
@@ -144,11 +155,16 @@ class HttpService(
      * Copy [input] → [output] in 64 KB chunks (constant memory), reporting byte
      * progress. Progress is throttled: at most once per [PROGRESS_MIN_BYTES] or
      * [PROGRESS_INTERVAL_MS], whichever first, plus a guaranteed final call.
+     * Aborts via [ResponseTooLargeException] the moment the running total would
+     * exceed [maxBytes], before that final chunk is written — so a too-large
+     * response is never fully buffered to disk just to be deleted afterward.
      */
     private fun copyStreaming(
         input: InputStream,
         output: OutputStream,
         contentLength: Long?,
+        maxBytes: Long?,
+        url: String,
         onProgress: ((bytesRead: Long, contentLength: Long?) -> Unit)?,
     ) {
         val buffer = ByteArray(64 * 1024)
@@ -158,8 +174,11 @@ class HttpService(
         while (true) {
             val read = input.read(buffer)
             if (read == -1) break
-            output.write(buffer, 0, read)
             total += read
+            if (maxBytes != null && total > maxBytes) {
+                throw ResponseTooLargeException(url, maxBytes)
+            }
+            output.write(buffer, 0, read)
             if (onProgress != null) {
                 val now = System.currentTimeMillis()
                 if (total - lastBytes >= PROGRESS_MIN_BYTES || now - lastAt >= PROGRESS_INTERVAL_MS) {
@@ -187,6 +206,10 @@ class HttpService(
             try {
                 return block()
             } catch (t: CancellationException) {
+                throw t
+            } catch (t: ResponseTooLargeException) {
+                // Deterministic, not transient: the response will still be too large
+                // on the next attempt, so retrying would just waste 3x the bandwidth.
                 throw t
             } catch (t: TooManyRequestsException) {
                 if (attempt >= MAX_RETRY_ATTEMPTS) {
@@ -250,6 +273,10 @@ class HttpService(
 
     class TooManyRequestsException(val retryAfterMillis: Long?) :
         Exception("HTTP 429 Too Many Requests")
+
+    /** Thrown by [downloadToFile] when a response exceeds a caller-supplied [maxBytes]. */
+    class ResponseTooLargeException(val requestUrl: String, val limitBytes: Long) :
+        Exception("Response from $requestUrl exceeded the $limitBytes byte limit")
 
     companion object {
         private const val MAX_RETRY_ATTEMPTS = 3

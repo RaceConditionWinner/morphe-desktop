@@ -83,7 +83,7 @@ import app.morphe.engine.model.PatchedAppRecord
 import app.morphe.gui.data.model.PatchSource
 import app.morphe.gui.data.model.SupportedApp
 import app.morphe.gui.ui.components.AppCard
-import app.morphe.gui.ui.components.LocalCardFills
+import app.morphe.gui.ui.components.LocalAppCardInk
 import app.morphe.gui.ui.components.MorpheActionButtonHeight
 import app.morphe.gui.ui.components.MorpheBadge
 import app.morphe.gui.ui.components.MorpheBanner
@@ -255,18 +255,15 @@ fun YourAppRow(
 
     val initial = record.displayName.firstOrNull()?.uppercase() ?: "?"
 
-    val cardFills = LocalCardFills.current
-
     AppCard(
         modifier = Modifier.fillMaxWidth(),
         cornerRadius = corners.medium,
         appIconColorHex = appIconColorHex,
-        fill = cardFills[record.packageName],
         onClick = onClick,
-        onCustomise = {
-            cardFills.requestEdit(record.packageName, record.displayName, appIconColorHex)
-        },
     ) {
+        // Read inside the card, which is where the resolved ink is provided
+        val ink = LocalAppCardInk.current
+
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -278,11 +275,11 @@ fun YourAppRow(
                 modifier = Modifier
                     .size(28.dp)
                     .clip(RoundedCornerShape(corners.small))
-                    .border(1.dp, Color.White.copy(alpha = 0.35f), RoundedCornerShape(corners.small))
-                    .background(Color.White.copy(alpha = 0.06f)),
+                    .border(1.dp, ink.outline, RoundedCornerShape(corners.small))
+                    .background(ink.chipContent.copy(alpha = 0.06f)),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(initial, fontSize = 12.sp, fontWeight = FontWeight.Bold, fontFamily = font, color = Color.White)
+                Text(initial, fontSize = 12.sp, fontWeight = FontWeight.Bold, fontFamily = font, color = ink.title)
             }
             Spacer(Modifier.width(10.dp))
             Column(modifier = Modifier.weight(1f)) {
@@ -291,7 +288,7 @@ fun YourAppRow(
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
                     fontFamily = font,
-                    color = Color.White,
+                    color = ink.title,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -300,7 +297,7 @@ fun YourAppRow(
                     fontSize = 10.sp,
                     fontFamily = font,
                     fontWeight = FontWeight.Normal,
-                    color = Color.White.copy(alpha = 0.6f),
+                    color = ink.subtitle,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -318,7 +315,7 @@ fun YourAppRow(
                 PatchedStateBadge(state, font)
             }
         }
-        deviceInfo?.let { DeviceLine(it, font, Color.White.copy(alpha = 0.5f), cardChipInk) }
+        deviceInfo?.let { DeviceLine(it, font, ink.title.copy(alpha = 0.5f), cardChipInk) }
         updateInfo?.sources?.firstOrNull()?.let { s ->
             val more = updateInfo.sources.size - 1
             VersionBumpText(
@@ -346,7 +343,7 @@ fun YourAppRow(
                 fontSize = 11.sp,
                 fontFamily = font,
                 fontWeight = FontWeight.Normal,
-                color = Color.White.copy(alpha = 0.6f),
+                color = ink.subtitle,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -362,7 +359,7 @@ fun YourAppRow(
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Normal,
                 fontFamily = font,
-                color = Color.White,
+                color = ink.title,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -410,7 +407,6 @@ fun PatchedAppDetailDialog(
     val font = LocalMorpheFont.current
     val accents = LocalMorpheAccents.current
     val corners = LocalMorpheCorners.current
-    val cardFills = LocalCardFills.current
     val patchCount = record.patchSelectionByBundle.values.sumOf { it.size }
     val hasUpdate = updateInfo != null && (updateInfo.appOutdated || updateInfo.patchesChanged)
     val installPending = deviceInfo?.installPending == true
@@ -813,16 +809,6 @@ fun PatchedAppDetailDialog(
                         "Folder", MorpheIcons.OpenInNew, accents.primary, font, corners.small,
                         modifier = Modifier.weight(1f), onClick = onOpenFolder,
                     )
-                    DetailActionPill(
-                        "Customise", MorpheIcons.Palette, accents.primary, font, corners.small,
-                        modifier = Modifier.weight(1f),
-                    ) {
-                        cardFills.requestEdit(
-                            record.packageName,
-                            record.displayName,
-                            supportedApp?.appIconColor,
-                        )
-                    }
                     DetailActionPill(
                         "Forget", MorpheIcons.Delete,
                         MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f), font, corners.small,
@@ -1372,15 +1358,16 @@ private fun VersionBumpText(
     font: FontFamily,
     suffix: String? = null,
 ) {
-    val labelColor = Color.White
-    val muted = Color.White.copy(alpha = 0.6f)
-    val arrow = Color.White.copy(alpha = 0.6f)
+    val ink = LocalAppCardInk.current
+    val labelColor = ink.title
+    val muted = ink.subtitle
+    val arrow = ink.subtitle
     val text = buildAnnotatedString {
         withStyle(SpanStyle(color = labelColor, fontWeight = FontWeight.Bold)) { append(label) }
         withStyle(SpanStyle(color = muted)) { append("v${oldVersion.removePrefix("v")}") }
         if (newVersion != null) {
             withStyle(SpanStyle(color = arrow)) { append("  →  ") }
-            withStyle(SpanStyle(color = Color.White, fontWeight = FontWeight.Bold)) { append("v${newVersion.removePrefix("v")}") }
+            withStyle(SpanStyle(color = labelColor, fontWeight = FontWeight.Bold)) { append("v${newVersion.removePrefix("v")}") }
         }
         if (suffix != null) withStyle(SpanStyle(color = muted)) { append(suffix) }
     }

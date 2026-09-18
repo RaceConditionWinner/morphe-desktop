@@ -27,6 +27,7 @@ import java.util.logging.Logger
  * morphe-data/
  *   patches/{owner}-{repo}/v1.5.0__patches.mpp   # downloaded .mpp files
  *   logs/                                        # app logs
+ *   avatars/{urlHash}.avatar                     # cached patch-source owner avatars
  *   icons/{packageName}/                         # user-created custom app icons (persistent)
  *   config.json                                  # GUI preferences + sources
  *   tmp/patching-{timestamp}/                    # per-session patcher scratch
@@ -71,6 +72,11 @@ object MorpheData {
     /** App logs. */
     val logsDir: File by lazy { File(root, "logs").also { it.mkdirs() } }
 
+    /** Cached patch-source owner avatars (GitHub/GitLab), keyed by a hash of their
+     *  URL. Purely a re-fetchable cache, so it IS wiped by clear-cache, same as
+     *  [patchesDir]. See `AvatarRepository`. */
+    val avatarsDir: File by lazy { File(root, "avatars").also { it.mkdirs() } }
+
     /** User-created custom app icons (Icon Studio output), organized per package.
      *  Persistent USER CONTENT. Deliberately NOT wiped by clear-cache. */
     val iconsDir: File by lazy { File(root, "icons").also { it.mkdirs() } }
@@ -78,6 +84,24 @@ object MorpheData {
     /** Patcher scratch space. Each patching session gets its own subfolder
      *  here (see Phase 6 of the unified-data-location plan). */
     val tmpDir: File by lazy { File(root, "tmp").also { it.mkdirs() } }
+
+    /**
+     * Retained pre-patch (original) APKs, one per package+version, for reuse on
+     * a later repatch — see `app.morphe.engine.OriginalApkRepository`. Ported
+     * concept from morphe-manager's `Filesystem.originalApksDir`. Deliberately
+     * NOT wiped by clear-cache: losing it costs the user a re-locate-the-file
+     * step, not disposable cache content, so clearing caches shouldn't
+     * silently make "repatch" harder.
+     */
+    val originalApksDir: File by lazy { File(root, "original-apks").also { it.mkdirs() } }
+
+    /**
+     * Last-known-good copy of the remote patch-source blocklist (see
+     * `BlocklistRepository`), so a blocked source stays refused even on an
+     * offline launch rather than only being enforced right after a
+     * successful refresh.
+     */
+    val blocklistCacheFile: File get() = File(root, "blocklist-cache.json")
 
     /** GUI's persisted preferences (theme, enabled sources, etc.). */
     val configFile: File get() = File(root, "config.json")

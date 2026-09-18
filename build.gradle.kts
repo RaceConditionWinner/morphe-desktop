@@ -147,6 +147,7 @@ dependencies {
     testImplementation(libs.kotlin.test)
     testImplementation(libs.junit.params)
     testImplementation(libs.mockk)
+    testImplementation(libs.ktor.client.mock)
 }
 
 aboutLibraries {

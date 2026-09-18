@@ -5,7 +5,10 @@
 
 package app.morphe.gui.di
 
+import app.morphe.engine.OriginalApkRepository
 import app.morphe.engine.PatchedAppStore
+import app.morphe.gui.data.repository.AvatarRepository
+import app.morphe.gui.data.repository.BlocklistRepository
 import app.morphe.gui.data.repository.ChangelogRepository
 import app.morphe.gui.data.repository.ConfigRepository
 import app.morphe.gui.data.repository.PatchPreferencesRepository
@@ -91,19 +94,25 @@ val appModule = module {
     single { ConfigRepository() }
     single { PatchPreferencesRepository() }
     single { SeenPatchesRepository() }
-    single { PatchSourceManager(get(), get()) }
+    single { BlocklistRepository(get(), get()) }
+    single { PatchSourceManager(get(), get(), get()) }
     single { PatchService() }
     single { UpdateCheckRepository(get()) }
     single { ChangelogRepository(get()) }
+    single { AvatarRepository(get()) }
     single { PatchedAppStore.shared }
+    single {
+        val configRepository = get<ConfigRepository>()
+        OriginalApkRepository(isRetentionEnabled = { configRepository.loadConfig().saveOriginalApks })
+    }
 
     // ViewModels (ScreenModels)
     // ViewModels observe PatchSourceManager.sourceVersion and reload on source changes.
     factory {
-        HomeViewModel(get(), get(), get(), get(), get(), get())
+        HomeViewModel(get(), get(), get(), get(), get(), get(), get())
     }
     factory {
-        QuickPatchViewModel(get(), get(), get(), get())
+        QuickPatchViewModel(get(), get(), get(), get(), get(), get(), get())
     }
     factory { params ->
         val psm = get<PatchSourceManager>()
@@ -141,6 +150,7 @@ val appModule = module {
     factory { params ->
         PatchingViewModel(
             params.get(),
+            get(),
             get(),
             get(),
             get()

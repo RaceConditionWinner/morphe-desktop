@@ -82,8 +82,29 @@ data class AppConfig(
      */
     val sourceVersionPrefs: Map<String, SourceVersionPref> = emptyMap(),
     val sourceChannelFlagsSeeded: Boolean = false,
-    val cardFills: Map<String, MorpheFill> = emptyMap(),
+    /**
+     * The universal app card color mode, as an [AppCardColorMode] name. Stored as a string, like
+     * [themePreference], so an unreadable value degrades to the default instead of failing the
+     * whole config load. Read it through [getAppCardColorMode].
+     */
+    val appCardColorMode: String = AppCardColorMode.DEFAULT.name,
+    /**
+     * The four app card colors the editor keeps, encoded by
+     * [AppCardColorDefaults.encodeColorValues]. Kept for every mode, so switching modes and back
+     * does not discard what was picked. Read it through [getAppCardColorValues].
+     */
+    val customAppCardColors: String = "",
+    /**
+     * LEGACY global card fill, from before app card colors became a semantic configuration.
+     * Migrated once into [appCardColorMode] / [customAppCardColors] by
+     * [ConfigRepository.migrateCardFills], then left alone. Do not read directly.
+     */
     val globalCardFill: MorpheFill? = null,
+    /**
+     * LEGACY per-app card fills. App card colors are one universal configuration now, so these
+     * have nowhere to migrate to and are dropped on the first save. Do not read.
+     */
+    val cardFills: Map<String, MorpheFill> = emptyMap(),
     val useSharpCorners: Boolean = false,
     val homeAppSortMode: String = "RECOMMENDED",
     val preferredPatchChannel: String = PatchChannel.STABLE.name,
@@ -143,6 +164,13 @@ data class AppConfig(
     // (only applies when a rename patch was used and stock is installed). Default
     // OFF. It reaches into a stock app's behavior.
     val disableStockLinksAfterInstall: Boolean = false,
+    // Whether a successful patch retains a copy of the pre-patch (original) APK,
+    // so a later repatch can reuse it instead of requiring the user to re-supply
+    // the file — see OriginalApkRepository. Default ON, matching morphe-manager's
+    // own default: the archive only grows with actual use (one entry per
+    // package+version, deduplicated), and losing the ability to repatch without
+    // re-locating the original file is a worse default than the disk cost.
+    val saveOriginalApks: Boolean = true,
 ) {
 
     fun getUpdateChannelPreference(): UpdateChannelPreference? {
@@ -153,6 +181,17 @@ data class AppConfig(
             null
         }
     }
+    /** The stored app card color mode, or [AppCardColorMode.DEFAULT] when it does not name one. */
+    fun getAppCardColorMode(): AppCardColorMode = try {
+        AppCardColorMode.valueOf(appCardColorMode)
+    } catch (e: IllegalArgumentException) {
+        AppCardColorMode.DEFAULT
+    }
+
+    /** The stored app card colors, decoded. Blank decodes to all-empty, which means "unset". */
+    fun getAppCardColorValues(): AppCardColorValues =
+        AppCardColorDefaults.decodeColorValues(customAppCardColors)
+
     fun getThemePreference(): ThemePreference {
         if (themePreference == "PURE_BLACK") return ThemePreference.AMOLED
         return try {

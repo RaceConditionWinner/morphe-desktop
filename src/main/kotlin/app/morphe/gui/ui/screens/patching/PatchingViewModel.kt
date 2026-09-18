@@ -7,6 +7,7 @@ package app.morphe.gui.ui.screens.patching
 
 import app.morphe.engine.MorpheComponents
 import app.morphe.engine.MorpheData
+import app.morphe.engine.OriginalApkRepository
 import app.morphe.engine.PatchedAppStore
 import app.morphe.engine.UpdateChecker
 import app.morphe.engine.model.PatchedAppRecord
@@ -41,6 +42,7 @@ class PatchingViewModel(
     private val patchService: PatchService,
     private val configRepository: ConfigRepository,
     private val patchedAppStore: PatchedAppStore,
+    private val originalApkRepository: OriginalApkRepository,
 ) : ScreenModel {
 
     private val _uiState = MutableStateFlow(PatchingUiState())
@@ -274,6 +276,15 @@ class PatchingViewModel(
                     patchedAt = System.currentTimeMillis(),
                     patchedWithMorpheVersion = UpdateChecker.currentVersion() ?: "unknown",
                 )
+            )
+            // Best-effort, same "never disrupt the success UX" contract as this whole
+            // function. Uses the same resolved package/version just written above, so
+            // a later repatch of pkg can find its way back to the exact input this
+            // patch used even if the user's own copy of that file is gone by then.
+            originalApkRepository.saveOriginalApk(
+                packageName = pkg,
+                version = manifest?.versionName?.takeIf { it.isNotBlank() } ?: patchResult.packageVersion,
+                sourceFile = File(config.inputApkPath),
             )
         } catch (e: Exception) {
             Logger.error("Failed to record patched app", e)

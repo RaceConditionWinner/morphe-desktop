@@ -89,6 +89,12 @@ class PatchSelectionViewModel(
     private val sourceIdsByName: Map<String, String> = emptyMap(),
 ) : ScreenModel {
 
+    /** Resolves a bundle's display name to its stable id via [sourceIdsByName],
+     *  falling back to the name itself when no current source matches (a
+     *  since-renamed/removed source, or a one-click-repatch seed) — the same
+     *  fallback a legacy name-keyed record would need to stay reachable under. */
+    private fun resolveSourceId(bundleName: String): String = sourceIdsByName[bundleName] ?: bundleName
+
     // Actual path to use for the primary file. May differ from patchesFilePath
     // if we had to re-download (cache cleared, etc.)
     private var actualPatchesFilePath: String = patchesFilePath
@@ -199,7 +205,7 @@ class PatchSelectionViewModel(
                         Logger.info("Repatch: seeded selection for $packageName from record")
                     } else {
                         for ((bundleId, bundleName, patches) in bundles) {
-                            val saved = preferencesRepository.get(bundleName, packageName)
+                            val saved = preferencesRepository.get(resolveSourceId(bundleName), packageName)
                             if (saved != null) {
                                 anyBundleHasSaved = true
                                 val byName = patches.associateBy { it.name }
@@ -209,7 +215,7 @@ class PatchSelectionViewModel(
                                     .mapNotNull { byName[it]?.uniqueId }
                                     .toSet()
 
-                                val seen = seenPatchesRepository.get(packageName, bundleName)
+                                val seen = seenPatchesRepository.get(packageName, resolveSourceId(bundleName))
                                     ?: saved.patches.keys
                                 val fresh = patches.filter { it.name !in seen }
                                 if (fresh.isNotEmpty()) {
@@ -519,9 +525,9 @@ class PatchSelectionViewModel(
                 val patchNamesInBundle = patches.mapTo(mutableSetOf()) { it.name }
                 val scopedOptions = groupedOptions.filterKeys { it in patchNamesInBundle }
 
-                seenPatchesRepository.save(packageName, bundleName, patchNamesInBundle)
+                seenPatchesRepository.save(packageName, resolveSourceId(bundleName), patchNamesInBundle)
                 preferencesRepository.save(
-                    sourceName = bundleName,
+                    sourceName = resolveSourceId(bundleName),
                     packageName = packageName,
                     enabledPatchNames = enabledNames,
                     disabledPatchNames = disabledNames,
@@ -569,9 +575,14 @@ class PatchSelectionViewModel(
 
         // Recall metadata: capture per-bundle selection and the source+version
         // snapshot so the patching success path can record a PatchedAppRecord.
+        //
+        // Both selectionByBundle's keys and sourcesSnapshot[].sourceId resolve
+        // through sourceIdsByName to the source's stable id, not its display
+        // name — a renamed source must not orphan a patched app's recorded
+        // selection/provenance. sourceName is kept purely for display.
         val state = _uiState.value
         val selectionByBundle = state.bundles.associate { bundle ->
-            bundle.bundleName to state.selectedByBundle[bundle.bundleId].orEmpty()
+            (sourceIdsByName[bundle.bundleName] ?: bundle.bundleName) to state.selectedByBundle[bundle.bundleId].orEmpty()
         }
         val fullSourcesSnapshot = actualPatchesFilePaths.mapIndexed { i, path ->
             val name = patchSourceNames.getOrNull(i) ?: File(path).nameWithoutExtension
@@ -583,7 +594,7 @@ class PatchSelectionViewModel(
         }
 
         val activeSources = fullSourcesSnapshot.filter { snapshot ->
-            selectionByBundle[snapshot.sourceName]?.isNotEmpty() == true
+            selectionByBundle[snapshot.sourceId]?.isNotEmpty() == true
         }
         
         val displaySources = activeSources.takeIf { it.isNotEmpty() } ?: fullSourcesSnapshot.take(1)

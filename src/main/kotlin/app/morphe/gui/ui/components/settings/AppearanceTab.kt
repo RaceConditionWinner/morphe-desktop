@@ -34,10 +34,14 @@ import app.morphe.gui.LocalBackgroundType
 import app.morphe.gui.LocalEnableParallax
 import app.morphe.gui.LocalSharpCorners
 import app.morphe.gui.data.repository.ConfigRepository
+import app.morphe.gui.LocalAppCardColors
+import app.morphe.gui.data.model.AppCardColorConfig
+import app.morphe.gui.data.model.AppCardColorValues
 import app.morphe.gui.ui.components.AppCard
-import app.morphe.gui.ui.components.LocalCardFills
 import app.morphe.gui.ui.components.MorpheChoiceChip
 import app.morphe.gui.ui.components.MorpheColorPickerCard
+import app.morphe.gui.ui.components.color.AppCardColorDialog
+import app.morphe.gui.util.toHexString
 import app.morphe.gui.ui.components.color.CustomSwatches
 import app.morphe.gui.ui.components.handCursor
 import app.morphe.gui.ui.icons.MorpheIcons
@@ -195,28 +199,31 @@ internal fun AppearanceTab(
     SectionLabel("App cards", font, icon = MorpheIcons.Gradient)
     Spacer(Modifier.height(8.dp))
 
-    val cardFills = LocalCardFills.current
+    // One universal configuration for every app card. The preview below is a real card, and it
+    // is inside the theme that resolves them, so it already shows whatever is configured
+    var appCardColors by LocalAppCardColors.current
+    var showAppCardColorDialog by remember { mutableStateOf(false) }
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         AppCard(
-            modifier = Modifier.width(72.dp).height(34.dp),
+            modifier = Modifier.width(88.dp).height(38.dp),
             cornerRadius = corners.small,
-            fill = cardFills.globalFill,
             interactive = false,
         ) {}
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = "Colour for every card",
+                text = appCardColors.mode.label,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Medium,
                 fontFamily = font,
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Text(
-                text = "Cards you have customised individually keep their own colour",
+                text = appCardColors.mode.description,
                 fontSize = 11.sp,
                 fontFamily = font,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -226,33 +233,36 @@ internal fun AppearanceTab(
             text = "Customise",
             active = false,
             font = font,
-            onClick = { cardFills.requestEditGlobal() },
+            onClick = { showAppCardColorDialog = true },
         )
     }
 
-    if (cardFills.fills.isNotEmpty()) {
-        Spacer(Modifier.height(8.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Text(
-                text = "${cardFills.fills.size} card" +
-                    (if (cardFills.fills.size == 1) "" else "s") +
-                    " override this",
-                fontSize = 11.sp,
-                fontFamily = font,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.weight(1f),
-            )
-            MorpheChoiceChip(
-                text = "Reset",
-                active = false,
-                font = font,
-                onClick = { cardFills.onClearAll() },
-            )
-        }
+    if (showAppCardColorDialog) {
+        val values = appCardColors.values
+        AppCardColorDialog(
+            mode = appCardColors.mode,
+            accentColorHex = customAccentColorArgb?.let { Color(it).toHexString() }.orEmpty(),
+            startColorHex = values.startHex,
+            middleColorHex = values.middleHex,
+            endColorHex = values.endHex,
+            solidColorHex = values.solidHex,
+            onApply = { mode, start, middle, end, solid ->
+                val updated = AppCardColorConfig(
+                    mode = mode,
+                    values = AppCardColorValues(
+                        startHex = start,
+                        middleHex = middle,
+                        endHex = end,
+                        solidHex = solid,
+                    ),
+                )
+                // The in-memory state is what every card reads, so it moves first and the
+                // write follows; a failed write leaves the screen honest about what it shows
+                appCardColors = updated
+                scope.launch { configRepo.setAppCardColors(updated.mode, updated.values) }
+            },
+            onDismiss = { showAppCardColorDialog = false },
+        )
     }
 
     SettingsDivider(borderColor)

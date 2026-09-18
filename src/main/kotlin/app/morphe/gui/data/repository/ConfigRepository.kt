@@ -14,10 +14,15 @@ import app.morphe.gui.data.model.PatchChannel
 import app.morphe.gui.data.model.PatchSource
 import app.morphe.gui.data.model.UpdateChannelPreference
 import app.morphe.gui.data.model.MorpheFill
+import app.morphe.gui.data.model.AppCardColorDefaults
+import app.morphe.gui.data.model.AppCardColorMode
+import app.morphe.gui.data.model.AppCardColorValues
 import app.morphe.gui.ui.theme.ThemePreference
 import app.morphe.gui.util.FileUtils
 import app.morphe.gui.util.Logger
 import app.morphe.gui.util.isDevTag
+import app.morphe.gui.util.toHexString
+import androidx.compose.ui.graphics.Color
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -51,7 +56,7 @@ class ConfigRepository {
         try {
             if (configFile.exists()) {
                 val content = configFile.readText()
-                val config = json.decodeFromString<AppConfig>(content)
+                val config = migrateCardFills(json.decodeFromString<AppConfig>(content))
                 cachedConfig = config
                 Logger.info("Config loaded from ${configFile.absolutePath}")
                 config
@@ -100,22 +105,86 @@ class ConfigRepository {
         saveConfig(current.copy(homeAppSortMode = mode))
     }
 
-    suspend fun setGlobalCardFill(fill: MorpheFill?) {
+    /**
+     * Persists the whole app card color configuration in one write: the mode together with all
+     * four colors. The colors are kept even for [AppCardColorMode.DEFAULT], so switching modes
+     * back and forth does not discard them.
+     *
+     * This is the only entry point that writes app card colors. The editor holds a draft and
+     * calls it once on Save, rather than writing each movement of the picker.
+     */
+    suspend fun setAppCardColors(mode: AppCardColorMode, values: AppCardColorValues) {
         val current = loadConfig()
-        saveConfig(current.copy(globalCardFill = fill))
+        saveConfig(
+            current.copy(
+                appCardColorMode = mode.name,
+                customAppCardColors = AppCardColorDefaults.encodeColorValues(values),
+            )
+        )
     }
 
-    suspend fun clearCardFills() {
-        val current = loadConfig()
-        saveConfig(current.copy(cardFills = emptyMap()))
-    }
+    /**
+     * Moves a config written before app card colors became a universal configuration onto the
+     * new fields, once.
+     *
+     * The old global fill maps cleanly: a solid becomes [AppCardColorMode.SOLID], a gradient's
+     * outer and middle stops become the three stops of [AppCardColorMode.GRADIENT], and the
+     * accent fill becomes [AppCardColorMode.ACCENT]. Per-app fills have nowhere to go — colors
+     * are one choice for every card now — so they are dropped rather than guessed at.
+     *
+     * A config that already carries a mode or colors is left alone, so this cannot overwrite a
+     * choice made since upgrading.
+     */
+    private fun migrateCardFills(config: AppConfig): AppConfig {
+        val legacy = config.globalCardFill
+        if (legacy == null && config.cardFills.isEmpty()) return config
 
-    suspend fun setCardFill(packageName: String, fill: MorpheFill?) {
-        val current = loadConfig()
-        val updated = current.cardFills.toMutableMap().apply {
-            if (fill == null) remove(packageName) else put(packageName, fill)
+        val alreadyConfigured = config.appCardColorMode != AppCardColorMode.DEFAULT.name ||
+            config.customAppCardColors.isNotBlank()
+
+        val migrated = if (alreadyConfigured) {
+            config
+        } else {
+            when (legacy) {
+                is MorpheFill.Accent -> config.copy(appCardColorMode = AppCardColorMode.ACCENT.name)
+
+                is MorpheFill.Solid -> config.copy(
+                    appCardColorMode = AppCardColorMode.SOLID.name,
+                    customAppCardColors = AppCardColorDefaults.encodeColorValues(
+                        AppCardColorValues(solidHex = Color(legacy.argb).toHexString())
+                    ),
+                )
+
+                is MorpheFill.Gradient -> {
+                    val ordered = legacy.stops.sortedBy { it.position }
+                    if (ordered.isEmpty()) {
+                        config
+                    } else {
+                        val start = Color(ordered.first().argb)
+                        val middle = Color(ordered[ordered.size / 2].argb)
+                        val end = Color(ordered.last().argb)
+                        config.copy(
+                            appCardColorMode = AppCardColorMode.GRADIENT.name,
+                            customAppCardColors = AppCardColorDefaults.encodeColorValues(
+                                AppCardColorValues(
+                                    startHex = start.toHexString(),
+                                    middleHex = middle.toHexString(),
+                                    endHex = end.toHexString(),
+                                    solidHex = middle.toHexString(),
+                                )
+                            ),
+                        )
+                    }
+                }
+
+                // An image fill was never something a card could resolve per app, and there is
+                // no color to carry over from one
+                else -> config
+            }
         }
-        saveConfig(current.copy(cardFills = updated))
+
+        Logger.info("Migrated legacy card fills to the universal app card color configuration")
+        return migrated.copy(globalCardFill = null, cardFills = emptyMap())
     }
 
     /**

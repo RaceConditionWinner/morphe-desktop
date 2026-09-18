@@ -6,7 +6,7 @@ kotlin = "2.4.20"
 # CLI
 picocli = "4.7.7"
 arsclib = "a28c6fb2a7"
-morphe-patcher = "1.14.0"
+morphe-patcher = "1.14.0-dev.1" # TODO change to stable
 morphe-library = "1.4.0"
 jadb = "1.2.3"
 
@@ -61,6 +61,7 @@ ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "kto
 ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }
 ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktor" }
 ktor-client-logging = { module = "io.ktor:ktor-client-logging", version.ref = "ktor" }
+ktor-client-mock = { module = "io.ktor:ktor-client-mock", version.ref = "ktor" }
 
 # Koin
 koin-bom = { module = "io.insert-koin:koin-bom", version.ref = "koin-bom" }

@@ -36,12 +36,13 @@ import app.morphe.gui.ui.screens.home.components.SupportedAppsListPane
 import app.morphe.gui.ui.screens.home.components.UninstallConfirmDialog
 import app.morphe.gui.ui.screens.home.components.VersionWarningDialog
 import app.morphe.gui.ui.screens.patches.PatchSelectionScreen
-import app.morphe.gui.ui.screens.patches.PatchesScreen
 import app.morphe.gui.util.EnabledSourcesLoader
 import app.morphe.gui.util.MorpheFilePicker
 import app.morphe.gui.util.VersionStatus
 import app.morphe.gui.util.sourceChannelMap
 import app.morphe.gui.util.sourceErrorMap
+import app.morphe.gui.util.sourcePatchCountMap
+import app.morphe.gui.util.sourceUpdateAvailableMap
 import app.morphe.gui.util.sourceVersionMap
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.koin.koinScreenModel
@@ -51,8 +52,6 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import java.awt.Desktop
 import java.io.File
 import java.util.UUID
-import kotlin.time.Duration.Companion.milliseconds
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
@@ -80,7 +79,6 @@ fun HomeScreenContent(
     val allSources by patchSourceManager.allSources.collectAsState()
 
     var showSourceManagementSheet by rememberSaveable { mutableStateOf(false) }
-    var pendingReopenSheet by rememberSaveable { mutableStateOf(false) }
 
     // One-click repatch: a patched-app row's "Re-patch" action. Jump straight to
     // patch selection with the input APK + the record's saved selection, using
@@ -122,7 +120,19 @@ fun HomeScreenContent(
         if (File(record.inputApkPath).exists()) {
             repatchWithApk(record, record.inputApkPath)
         } else {
-            repatchMissingRecord = record
+            // The user's own copy of the input APK is gone (moved, cleaned up, a
+            // temp download folder emptied) — before falling back to asking them
+            // to re-select it, check whether a copy was retained at patch time
+            // (see OriginalApkRepository). Silent on a miss: that dialog is
+            // already the correct fallback and needs no extra messaging.
+            coroutineScope.launch {
+                val archived = viewModel.findOriginalApkPath(pkg)
+                if (archived != null) {
+                    repatchWithApk(record, archived)
+                } else {
+                    repatchMissingRecord = record
+                }
+            }
         }
     }
 
@@ -270,16 +280,6 @@ fun HomeScreenContent(
         )
     }
 
-    // Re-show the sheet after the pop animation finishes, NOT immediately on
-    // re-entry. Without the delay the sheet flashes in mid-transition.
-    LaunchedEffect(Unit) {
-        if (pendingReopenSheet) {
-            delay(220.milliseconds)
-            showSourceManagementSheet = true
-            pendingReopenSheet = false
-        }
-    }
-
     val navStackSize = navigator.items.size
     LaunchedEffect(navStackSize) {
         viewModel.refreshPatchesIfNeeded()
@@ -292,6 +292,8 @@ fun HomeScreenContent(
             sourceVersions = snapshot.sourceVersionMap(),
             sourceChannels = snapshot.sourceChannelMap(),
             sourceErrors = snapshot.sourceErrorMap(),
+            sourcePatchCounts = snapshot.sourcePatchCountMap(),
+            sourceUpdateAvailable = snapshot.sourceUpdateAvailableMap(),
             isLoading = uiState.isLoadingPatches,
             onToggleEnabled = { id, enabled ->
                 coroutineScope.launch {
@@ -316,19 +318,6 @@ fun HomeScreenContent(
                     // Reload so the union app list + display-name tiebreak reflect
                     // the new source priority.
                     viewModel.retryLoadPatches()
-                }
-            },
-            onOpenPatches = { sourceId ->
-                // Hide sheet immediately so it doesn't ride the push animation.
-                // Mark it as pending-reopen so it returns smoothly after pop.
-                showSourceManagementSheet = false
-                pendingReopenSheet = true
-                coroutineScope.launch {
-                    patchSourceManager.switchSource(sourceId)
-                    navigator.push(PatchesScreen(
-                        apkPath = uiState.apkInfo?.filePath ?: "",
-                        apkName = uiState.apkInfo?.appName ?: ""
-                    ))
                 }
             },
             onDismiss = { showSourceManagementSheet = false },

@@ -20,7 +20,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
@@ -30,7 +29,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import app.morphe.gui.ui.components.LocalCardFills
+import app.morphe.gui.ui.components.LocalAppCardInk
 import app.morphe.gui.ui.components.AppCard
 import app.morphe.gui.ui.components.MorpheCardChip
 import app.morphe.gui.data.model.SupportedApp
@@ -256,7 +255,6 @@ internal fun SupportedAppsRow(
                         },
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    val cardFills = LocalCardFills.current
                     filteredApps.forEach { app ->
                         val url = app.apkDownloadUrl
 
@@ -269,16 +267,11 @@ internal fun SupportedAppsRow(
                                 .fillMaxHeight(),
                             cornerRadius = corners.small,
                             appIconColorHex = app.appIconColor,
-                            fill = cardFills[app.packageName],
                             interactive = false,
-                            onCustomise = {
-                                cardFills.requestEdit(
-                                    app.packageName,
-                                    app.displayName,
-                                    app.appIconColor,
-                                )
-                            },
                         ) {
+                            // Read inside the card, which is where the resolved ink is provided
+                            val ink = LocalAppCardInk.current
+
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -292,7 +285,7 @@ internal fun SupportedAppsRow(
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.Bold,
                                     fontFamily = font,
-                                    color = Color.White,
+                                    color = ink.title,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
@@ -314,7 +307,7 @@ internal fun SupportedAppsRow(
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Normal,
                                     fontFamily = font,
-                                    color = Color.White.copy(alpha = 0.6f)
+                                    color = ink.subtitle
                                 )
 
                                 if (url != null) {

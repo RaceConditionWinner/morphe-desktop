@@ -13,10 +13,17 @@ import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import app.morphe.gui.data.model.AppCardColorDefaults
+import app.morphe.gui.data.model.AppCardColorMode
+import app.morphe.gui.data.model.AppCardColorResolver
+import app.morphe.gui.data.model.AppCardColorValues
+import app.morphe.gui.util.toHexString
 
 // Morphe Brand Colors
 object MorpheColors {
@@ -217,11 +224,22 @@ enum class ThemePreference {
 //  THEME COMPOSABLE
 // ════════════════════════════════════════════════════════════════════
 
+/**
+ * Resolves app card colors from the appearance settings, or `null` when cards keep the per-app
+ * colors declared by their patch bundle.
+ *
+ * Static, because a card reads it while drawing rather than while laying out, and a new resolver
+ * instance would otherwise invalidate every card that reads it.
+ */
+val LocalAppCardColorResolver = staticCompositionLocalOf<AppCardColorResolver?> { null }
+
 @Composable
 fun MorpheTheme(
     themePreference: ThemePreference = ThemePreference.SYSTEM,
     customAccentColorArgb: Int? = null,
     useSharpCorners: Boolean = false,
+    appCardColorMode: AppCardColorMode = AppCardColorMode.DEFAULT,
+    appCardColorValues: AppCardColorValues = AppCardColorValues(),
     content: @Composable () -> Unit
 ) {
     val baseColorScheme = when (themePreference) {
@@ -281,12 +299,30 @@ fun MorpheTheme(
         baseAccents
     }
 
+    // Remembered because a fresh resolver instance would invalidate every card that reads it.
+    // The accent is passed as the fallback rather than as the value, so ACCENT mode follows a
+    // theme accent the user never overrode
+    val appCardColorResolver = remember(
+        appCardColorMode,
+        customAccentColorArgb,
+        accents.primary,
+        appCardColorValues,
+    ) {
+        AppCardColorDefaults.resolver(
+            mode = appCardColorMode,
+            accentHex = customAccentColorArgb?.let { Color(it).toHexString() }.orEmpty(),
+            accentFallback = accents.primary,
+            values = appCardColorValues,
+        )
+    }
+
     CompositionLocalProvider(
         LocalMorpheCorners provides corners,
         LocalMorpheFont provides font,
         LocalMorpheMono provides monoFont,
         LocalMorpheAccents provides accents,
         LocalMorpheDimens provides MorpheDimens(),
+        LocalAppCardColorResolver provides appCardColorResolver,
     ) {
         MaterialTheme(
             colorScheme = colorScheme,

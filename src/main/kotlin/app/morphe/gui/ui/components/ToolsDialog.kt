@@ -235,7 +235,8 @@ fun ToolsDialog(
 private fun getCacheSizeBytes(): Long {
     val patchesSize = FileUtils.getPatchesDir().walkTopDown().filter { it.isFile }.sumOf { it.length() }
     val logsSize = FileUtils.getLogsDir().walkTopDown().filter { it.isFile }.sumOf { it.length() }
-    return patchesSize + logsSize
+    val avatarsSize = FileUtils.getAvatarsDir().walkTopDown().filter { it.isFile }.sumOf { it.length() }
+    return patchesSize + logsSize + avatarsSize
 }
 
 private fun formatCacheSize(totalSize: Long): String {

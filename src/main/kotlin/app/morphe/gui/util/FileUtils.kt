@@ -39,6 +39,9 @@ object FileUtils {
     /** Returns the logs directory. */
     fun getLogsDir(): File = MorpheData.logsDir
 
+    /** Returns the cached patch-source avatars directory. */
+    fun getAvatarsDir(): File = MorpheData.avatarsDir
+
     /** Returns the GUI config file path. */
     fun getConfigFile(): File = MorpheData.configFile
 

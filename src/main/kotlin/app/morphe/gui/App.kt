@@ -15,8 +15,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import app.morphe.gui.ui.components.CardFillHost
-import app.morphe.gui.data.model.MorpheFill
+import app.morphe.gui.data.model.AppCardColorConfig
 import app.morphe.gui.data.repository.ActiveMode
 import app.morphe.gui.data.repository.ConfigRepository
 import app.morphe.gui.data.repository.PatchSourceManager
@@ -85,6 +84,15 @@ val LocalCustomAccentColor = compositionLocalOf<MutableState<Int?>> {
     error("No LocalCustomAccentColor provided") 
 }
 
+/**
+ * The universal app card color configuration. One choice for every card, owned here and read by
+ * the appearance settings and by [app.morphe.gui.ui.theme.MorpheTheme], which turns it into the
+ * resolver the cards themselves use.
+ */
+val LocalAppCardColors = compositionLocalOf<MutableState<AppCardColorConfig>> {
+    error("No LocalAppCardColors provided")
+}
+
 val LocalSharpCorners = compositionLocalOf<MutableState<Boolean>> {
     error("No LocalSharpCorners provided")
 }
@@ -151,8 +159,7 @@ private fun appContent(
     var autoStartAdb by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(true) }
     val backgroundTypeState = remember { mutableStateOf(BackgroundType.CIRCLES) }
-    var cardFills by remember { mutableStateOf(emptyMap<String, MorpheFill>()) }
-    var globalCardFill by remember { mutableStateOf<MorpheFill?>(null) }
+    val appCardColorState = remember { mutableStateOf(AppCardColorConfig()) }
     val sharpCornersState = remember { mutableStateOf(false) }
     val backgroundSpeedState = remember { mutableFloatStateOf(1f) }
     val patchingCompletedState = remember { mutableStateOf(false) }
@@ -169,8 +176,10 @@ private fun appContent(
             BackgroundType.CIRCLES
         }
         enableParallaxState.value = config.enableParallax
-        cardFills = config.cardFills
-        globalCardFill = config.globalCardFill
+        appCardColorState.value = AppCardColorConfig(
+            mode = config.getAppCardColorMode(),
+            values = config.getAppCardColorValues(),
+        )
         sharpCornersState.value = config.useSharpCorners
 
         autoStartAdb = config.autoStartAdb
@@ -269,7 +278,9 @@ private fun appContent(
     MorpheTheme(
         themePreference = themePreference,
         customAccentColorArgb = customAccentColorState.value,
-        useSharpCorners = sharpCornersState.value
+        useSharpCorners = sharpCornersState.value,
+        appCardColorMode = appCardColorState.value.mode,
+        appCardColorValues = appCardColorState.value.values
     ) {
         CompositionLocalProvider(
             LocalThemeState provides themeState,
@@ -282,27 +293,10 @@ private fun appContent(
             LocalParallaxState provides parallaxState,
             LocalCustomAccentColor provides customAccentColorState,
             LocalSharpCorners provides sharpCornersState,
+            LocalAppCardColors provides appCardColorState,
             LocalBackgroundSpeed provides backgroundSpeedState,
             LocalPatchingCompleted provides patchingCompletedState
         ) {
-          CardFillHost(
-            fills = cardFills,
-            globalFill = globalCardFill,
-            onChange = { pkg, fill ->
-                cardFills = cardFills.toMutableMap().apply {
-                    if (fill == null) remove(pkg) else put(pkg, fill)
-                }
-                scope.launch { configRepository.setCardFill(pkg, fill) }
-            },
-            onGlobalChange = { fill ->
-                globalCardFill = fill
-                scope.launch { configRepository.setGlobalCardFill(fill) }
-            },
-            onClearAll = {
-                cardFills = emptyMap()
-                scope.launch { configRepository.clearCardFills() }
-            },
-          ) {
             // Tint the OS title bar (Windows DWM caption color, macOS traffic
             // light contrast) to match the active theme's surface color.
             val titleBarColor = MaterialTheme.colorScheme.surface
@@ -371,7 +365,6 @@ private fun appContent(
                     }
                 }
             }
-          }
         }
     }
 }
