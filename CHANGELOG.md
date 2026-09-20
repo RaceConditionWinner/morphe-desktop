@@ -1,3 +1,31 @@
+# [1.17.0-dev.1](https://github.com/MorpheApp/morphe-desktop/compare/v1.16.1-dev.1...v1.17.0-dev.1) (2026-09-17)
+
+
+### Features
+
+* Modernize patch selection layout and add category grouping ([#315](https://github.com/MorpheApp/morphe-desktop/issues/315)) ([1c60dc0](https://github.com/MorpheApp/morphe-desktop/commit/1c60dc014766adc879e6692d9d3d30a512243df6))
+
+## [1.16.1-dev.1](https://github.com/MorpheApp/morphe-desktop/compare/v1.16.0...v1.16.1-dev.1) (2026-09-17)
+
+
+### Bug Fixes
+
+* Update to latest Patcher ([6cc9b28](https://github.com/MorpheApp/morphe-desktop/commit/6cc9b28295d1b7cd65fd77271bb709e030cf28d2))
+
+# [1.16.0](https://github.com/MorpheApp/morphe-desktop/compare/v1.15.1...v1.16.0) (2026-09-14)
+
+
+### Bug Fixes
+
+* Resolve `Boolean/String` type mismatch when applying patch options from GUI ([#308](https://github.com/MorpheApp/morphe-desktop/issues/308)) ([c7c4a11](https://github.com/MorpheApp/morphe-desktop/commit/c7c4a110c285fe445b859effc6da98f92aa3a441))
+* Update to latest Patcher ([89e3868](https://github.com/MorpheApp/morphe-desktop/commit/89e3868d941651c6cd4a528a048cde7a454ca3fa))
+* Update to latest Patcher ([4f878dd](https://github.com/MorpheApp/morphe-desktop/commit/4f878dd3ff474551b11299b56ab0104e260f0c19))
+
+
+### Features
+
+* Prerelease aware updates + Changelog scoped badges + Overhauled "Your Apps" sheet + UI fixes ([#272](https://github.com/MorpheApp/morphe-desktop/issues/272)) ([5cdf1a0](https://github.com/MorpheApp/morphe-desktop/commit/5cdf1a00e6119afcf27ad8393c2b33873c5cd917)), closes [#259](https://github.com/MorpheApp/morphe-desktop/issues/259)
+
 # [1.16.0-dev.1](https://github.com/MorpheApp/morphe-desktop/compare/v1.15.2-dev.3...v1.16.0-dev.1) (2026-09-14)
 
 
