@@ -6,6 +6,7 @@
 package app.morphe.engine
 
 import app.morphe.engine.model.PatchedAppRecord
+import app.morphe.engine.util.AtomicFiles
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -16,8 +17,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.io.File
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
+import java.io.IOException
 import java.util.logging.Logger
 
 /**
@@ -28,6 +28,10 @@ import java.util.logging.Logger
  * file: `morphe-data/patched-apps.json`. Reads are cached in memory; writes go
  * through a [Mutex] (in-process safety) and are atomic (temp file + move) so a
  * crash mid-write can't corrupt the history.
+ *
+ * Writes have a hard success/failure contract: [upsert] and [delete] throw
+ * [IOException] when the change could not be persisted, leaving the in-memory
+ * state and [changes] untouched. A return therefore always means "on disk".
  *
  * The [file] is injectable for testing; production code uses the default under
  * [MorpheData.root].
@@ -65,7 +69,11 @@ class PatchedAppStore(
         mutex.withLock { load().firstOrNull { it.packageName == packageName } }
     }
 
-    /** Insert [record], replacing any existing record for the same package. */
+    /**
+     * Insert [record], replacing any existing record for the same package.
+     * @throws IOException if the history could not be persisted.
+     */
+    @Throws(IOException::class)
     suspend fun upsert(record: PatchedAppRecord): Unit = withContext(Dispatchers.IO) {
         mutex.withLock {
             val others = load().filterNot { it.packageName == record.packageName }
@@ -74,11 +82,16 @@ class PatchedAppStore(
         _changes.tryEmit(Unit)
     }
 
-    /** Remove the record for [packageName] if present. */
+    /**
+     * Remove the record for [packageName] if present.
+     * @throws IOException if the history could not be persisted.
+     */
+    @Throws(IOException::class)
     suspend fun delete(packageName: String): Unit = withContext(Dispatchers.IO) {
         val changed = mutex.withLock {
-            val remaining = load().filterNot { it.packageName == packageName }
-            if (remaining.size != cache?.size) {
+            val current = load()
+            val remaining = current.filterNot { it.packageName == packageName }
+            if (remaining.size != current.size) {
                 persist(remaining)
                 true
             } else {
@@ -96,9 +109,14 @@ class PatchedAppStore(
             try {
                 json.decodeFromString<StoreFile>(file.readText()).records
             } catch (e: Exception) {
-                // Corrupt/incompatible file: don't lose the user's ability to keep
-                // patching — start fresh in memory and let the next write heal it.
-                logger.warning("Could not read patched-app history (${e.message}); starting empty")
+                // Corrupt/incompatible file: keep the user able to patch by starting
+                // empty, but move the bad file aside first so the next write can't
+                // destroy whatever is still recoverable in it.
+                val preserved = AtomicFiles.quarantine(file)
+                logger.warning(
+                    "Could not read patched-app history (${e.message}); " +
+                        "preserved it as ${preserved.name} and starting empty"
+                )
                 emptyList()
             }
         } else {
@@ -108,27 +126,10 @@ class PatchedAppStore(
         return records
     }
 
+    /** Writes [records] durably; the cache only advances once they are on disk. */
     private fun persist(records: List<PatchedAppRecord>) {
-        try {
-            file.parentFile?.mkdirs()
-            val content = json.encodeToString(StoreFile.serializer(), StoreFile(SCHEMA_VERSION, records))
-            // Atomic write: write a temp file, then move it over the target so a
-            // crash never leaves a half-written history behind.
-            val tmp = File(file.parentFile, "${file.name}.tmp")
-            tmp.writeText(content)
-            try {
-                Files.move(
-                    tmp.toPath(), file.toPath(),
-                    StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE,
-                )
-            } catch (_: Exception) {
-                // ATOMIC_MOVE isn't supported on every filesystem — fall back.
-                Files.move(tmp.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING)
-            }
-            cache = records
-        } catch (e: Exception) {
-            logger.warning("Failed to write patched-app history: ${e.message}")
-        }
+        AtomicFiles.write(file, json.encodeToString(StoreFile.serializer(), StoreFile(SCHEMA_VERSION, records)))
+        cache = records
     }
 
     @Serializable

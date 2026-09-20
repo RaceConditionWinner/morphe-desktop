@@ -32,6 +32,7 @@ import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import app.morphe.gui.LocalBackgroundType
 import app.morphe.gui.LocalEnableParallax
+import app.morphe.gui.LocalGroupPatchesByCategory
 import app.morphe.gui.LocalSharpCorners
 import app.morphe.gui.data.repository.ConfigRepository
 import app.morphe.gui.LocalAppCardColors
@@ -264,6 +265,25 @@ internal fun AppearanceTab(
             onDismiss = { showAppCardColorDialog = false },
         )
     }
+
+    SettingsDivider(borderColor)
+
+    SectionLabel("Patch list", font, icon = MorpheIcons.Extension)
+    Spacer(Modifier.height(8.dp))
+
+    val groupPatchesByCategoryState = LocalGroupPatchesByCategory.current
+    SettingToggleRow(
+        label = "Patch categories",
+        description = "Group patches into expandable categories",
+        checked = groupPatchesByCategoryState.value,
+        onCheckedChange = { enabled ->
+            groupPatchesByCategoryState.value = enabled
+            scope.launch { configRepo.setGroupPatchesByCategory(enabled) }
+        },
+        accentColor = accents.primary,
+        font = font,
+        icon = MorpheIcons.Category
+    )
 
     SettingsDivider(borderColor)
 

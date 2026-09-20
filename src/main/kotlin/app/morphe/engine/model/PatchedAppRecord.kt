@@ -36,7 +36,13 @@ data class PatchedAppRecord(
     val apkVersion: String,
     val apkVersionCode: Int? = null,
 
-    /** Input APK path used. May no longer exist on disk. */
+    /**
+     * The original (pre-patch) APK a repatch reads. For records saved since Morphe took over
+     * the original, this is the Morphe-managed copy under `morphe-data/original-apks/`.
+     * Older records, and patches made with original-APK retention off or archiving failed,
+     * hold the user's own path, which may no longer exist. Resolve through
+     * `OriginalApkRepository.resolveInputApk` rather than trusting this directly.
+     */
     val inputApkPath: String,
     /** Output APK path we wrote. Its existence is the "is it still here" signal. */
     val outputApkPath: String,

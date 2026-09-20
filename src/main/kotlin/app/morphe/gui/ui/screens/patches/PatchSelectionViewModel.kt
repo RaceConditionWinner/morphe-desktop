@@ -11,10 +11,14 @@ import app.morphe.engine.model.PatchedAppRecord.PatchedSourceSnapshot
 import app.morphe.engine.util.ApkOutputNaming
 import app.morphe.gui.data.model.Patch
 import app.morphe.gui.data.model.PatchConfig
+import app.morphe.gui.data.model.PatchSource
 import app.morphe.gui.data.repository.ConfigRepository
+import app.morphe.gui.data.repository.CopySelectionCandidate
 import app.morphe.gui.data.repository.PatchPreferencesRepository
 import app.morphe.gui.data.repository.SeenPatchesRepository
 import app.morphe.gui.data.repository.PatchRepository
+import app.morphe.gui.data.repository.loadCopySelectionCandidates
+import app.morphe.gui.data.repository.resolveCopySelection
 import app.morphe.gui.util.FileUtils
 import app.morphe.gui.util.FileUtils.ANDROID_ARCHITECTURES
 import app.morphe.gui.util.Logger
@@ -308,54 +312,11 @@ class PatchSelectionViewModel(
         Result.success(bundles)
     }
 
-    // ── Legacy flat API (shims) ─────────────────────────────────────────────
-    //
-    // These shim methods keep the existing PatchSelectionScreen rendering
-    // compiling while the per-bundle UI is built out in a follow-up commit.
-    // Once the screen renders collapsible bundle boxes, these can be deleted.
-    //
-    // Behavior is best-effort: `togglePatch(patchId)` toggles in EVERY bundle
-    // that contains the patch (so old single-list UI matches old behavior:
-    // one click flips state everywhere). `selectAll`/`deselectAll`/etc. apply
-    // across all bundles in one go.
-
-    @Deprecated("Per-bundle UI: use togglePatch(bundleId, patchId)")
-    fun togglePatch(patchId: String) {
-        val state = _uiState.value
-        val newMap = state.selectedByBundle.toMutableMap()
-        for ((bundleId, _, patches) in state.bundles) {
-            if (patches.none { it.uniqueId == patchId }) continue
-            val cur = newMap[bundleId].orEmpty()
-            newMap[bundleId] = if (patchId in cur) cur - patchId else cur + patchId
-        }
-        _uiState.value = state.copy(selectedByBundle = newMap)
-    }
-
-    @Deprecated("Per-bundle UI: use selectAllInBundle")
-    fun selectAll() {
-        val state = _uiState.value
-        _uiState.value = state.copy(
-            selectedByBundle = state.bundles.associate { bundle ->
-                bundle.bundleId to bundle.patches.map { it.uniqueId }.toSet()
-            }
-        )
-    }
-
-    @Deprecated("Per-bundle UI: use deselectAllInBundle")
-    fun deselectAll() {
-        val state = _uiState.value
-        _uiState.value = state.copy(
-            selectedByBundle = state.bundles.associate { it.bundleId to emptySet() }
-        )
-    }
-
-    @Deprecated("Per-bundle UI: use applySavedDefaultsInBundle")
-    fun applySavedDefaults() {
-        val saved = _uiState.value.savedSelectedByBundle ?: return
-        _uiState.value = _uiState.value.copy(selectedByBundle = saved)
-    }
-
     // ── Per-bundle selection methods ────────────────────────────────────────
+    // The shim methods this file used to keep here (a flat togglePatch/selectAll/
+    // deselectAll/applySavedDefaults operating across every bundle at once) were
+    // a bridge for the old single-list UI. The screen now renders per-bundle
+    // collapsible boxes and calls these directly — confirmed dead, removed.
 
     fun togglePatch(bundleId: String, patchId: String) {
         val current = _uiState.value.selectedByBundle
@@ -396,6 +357,99 @@ class PatchSelectionViewModel(
         _uiState.value = _uiState.value.copy(
             selectedByBundle = _uiState.value.selectedByBundle + (bundleId to saved),
         )
+    }
+
+    // ── Copy selection from another app/source ──────────────────────────────
+    //
+    // Desktop-native port of Manager's CopySelectionLoader / CopySelectionController
+    // (section 11). Matches by saved patch *name* throughout (what
+    // PatchPreferencesRepository actually persists — see CopySelection.kt), converting to
+    // this bundle's current uniqueIds only at the end, the same way loading a saved
+    // selection already does in this ViewModel's init block. A candidate whose saved
+    // selection has since drifted (a patch renamed/removed upstream) simply contributes
+    // less, rather than the copy silently landing on the wrong patch.
+
+    /** Loads candidates for [bundleId] asynchronously into [PatchSelectionUiState.copySelectionCandidates].
+     *  [allSources] is passed in by the caller (the Composable already holds
+     *  `PatchSourceManager.allSources` for other UI) rather than injected here, keeping this
+     *  ViewModel's constructor unchanged. */
+    fun openCopySelectionPicker(bundleId: String, allSources: List<PatchSource>) {
+        val bundle = _uiState.value.bundles.firstOrNull { it.bundleId == bundleId } ?: return
+        _uiState.value = _uiState.value.copy(
+            copySelectionForBundle = bundleId,
+            copySelectionCandidates = emptyList(),
+            copySelectionLoading = true,
+        )
+        screenModelScope.launch {
+            val targetNames = bundle.patches.map { it.name }.toSet()
+            val candidates = loadCopySelectionCandidates(
+                patchPreferencesRepository = preferencesRepository,
+                allSources = allSources,
+                targetPackageName = packageName,
+                targetSourceId = resolveSourceId(bundle.bundleName),
+                targetPatchNames = targetNames,
+            )
+            // The user may have closed the picker, or opened a different bundle's, while
+            // this was loading — only apply the result if it's still the relevant one.
+            if (_uiState.value.copySelectionForBundle == bundleId) {
+                _uiState.value = _uiState.value.copy(
+                    copySelectionCandidates = candidates,
+                    copySelectionLoading = false,
+                )
+            }
+        }
+    }
+
+    fun closeCopySelectionPicker() {
+        _uiState.value = _uiState.value.copy(
+            copySelectionForBundle = null,
+            copySelectionCandidates = emptyList(),
+            copySelectionLoading = false,
+        )
+    }
+
+    /** Applies [candidate]'s saved selection to whichever bundle the picker is currently
+     *  open for. No-ops (and closes the picker) if nothing from it actually applies. */
+    fun applyCopySelection(candidate: CopySelectionCandidate) {
+        val bundleId = _uiState.value.copySelectionForBundle
+        val bundle = bundleId?.let { id -> _uiState.value.bundles.firstOrNull { it.bundleId == id } }
+        if (bundleId == null || bundle == null) {
+            closeCopySelectionPicker()
+            return
+        }
+        val byName = bundle.patches.associateBy { it.name }
+
+        screenModelScope.launch {
+            val copied = resolveCopySelection(preferencesRepository, candidate, byName.keys)
+            if (copied == null) {
+                closeCopySelectionPicker()
+                return@launch
+            }
+
+            val uniqueIds = copied.patchNames.mapNotNullTo(mutableSetOf()) { byName[it]?.uniqueId }
+
+            // Same shape as the saved-options materialization in the init block: options
+            // are keyed by patch name globally (identical patches across bundles share
+            // values), so only patches that actually exist in *this* bundle contribute.
+            val newOptions = _uiState.value.patchOptionValues.toMutableMap()
+            for ((patchName, opts) in copied.options) {
+                if (patchName !in byName) continue
+                for ((optKey, jsonValue) in opts) {
+                    newOptions["$patchName.$optKey"] = optionValueFromJson(jsonValue)
+                }
+            }
+
+            _uiState.value = _uiState.value.copy(
+                selectedByBundle = _uiState.value.selectedByBundle + (bundleId to uniqueIds),
+                patchOptionValues = newOptions,
+                copySelectionForBundle = null,
+                copySelectionCandidates = emptyList(),
+            )
+            Logger.info(
+                "Copied selection from ${candidate.sourceName}/${candidate.packageName} " +
+                    "into bundle $bundleId (${uniqueIds.size} patch(es))",
+            )
+        }
     }
 
     // ── Filter / search ─────────────────────────────────────────────────────
@@ -810,6 +864,10 @@ data class PatchSelectionUiState(
      *  across bundles share option values (intentional, the same patch means the
      *  same option). */
     val patchOptionValues: Map<String, String> = emptyMap(),
+    /** bundleId the "copy selection from another app/source" picker is open for, or null. */
+    val copySelectionForBundle: String? = null,
+    val copySelectionCandidates: List<CopySelectionCandidate> = emptyList(),
+    val copySelectionLoading: Boolean = false,
 ) {
     /** Total count of patches enabled across all bundles. Patches identical across bundles
      *  are counted once per bundle they're enabled in. Matches what the user toggled. */
@@ -817,18 +875,6 @@ data class PatchSelectionUiState(
 
     /** Total count of patches across all bundles. */
     val totalCount: Int get() = bundles.sumOf { it.patches.size }
-
-    // ── Legacy flat shims ────────────────────────────────────────────────
-    //
-    // These let the existing PatchSelectionScreen render against the new
-    // per-bundle state without changes. Deleted once the screen renders
-    // collapsible bundle boxes.
-
-    @Deprecated("Use bundles directly", ReplaceWith("bundles"))
-    val allPatches: List<Patch> get() = bundles.flatMap { it.patches }
-
-    @Deprecated("Use filteredBundles directly", ReplaceWith("filteredBundles"))
-    val filteredPatches: List<Patch> get() = filteredBundles.flatMap { it.patches }
 
     /** Which preset (if any) the SPECIFIED bundle's selection matches. Each box renders
      *  its own chip highlighting independently. */

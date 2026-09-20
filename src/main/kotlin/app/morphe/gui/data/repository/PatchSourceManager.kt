@@ -5,6 +5,7 @@
 
 package app.morphe.gui.data.repository
 
+import app.morphe.engine.MultiSourceLoader
 import app.morphe.engine.patches.PatchProvider
 import app.morphe.engine.patches.RemotePatchSourceFactory
 import app.morphe.gui.data.model.PatchSource
@@ -30,6 +31,8 @@ class PatchSourceManager(
     private val httpClient: HttpClient,
     private val configRepository: ConfigRepository,
     private val blocklistRepository: BlocklistRepository,
+    private val sourceMuteRepository: SourceMuteRepository,
+    private val patchPreferencesRepository: PatchPreferencesRepository,
 ) {
     private val repositories = mutableMapOf<String, PatchRepository>()
 
@@ -275,9 +278,80 @@ class PatchSourceManager(
     suspend fun removeSource(id: String) {
         configRepository.removePatchSource(id)
         repositories.remove(id)
+        // A removed source can't stay "muted for" anything, and a stale strike against a
+        // file that no longer exists would only ever misattribute a future unrelated source
+        // reusing the same id.
+        sourceMuteRepository.resetForSource(id)
+        patchPreferencesRepository.resetForSource(id)
+        MultiSourceLoader.forgetLoadGuardState(id)
         refreshEnabledSources()
         _sourceVersion.value++
     }
+
+    // ── Source muting ────────────────────────────────────────────────────────
+    //
+    // Narrows which of the *enabled* sources are offered for one particular app, without
+    // touching that source for anything else. See [SourceMuteRepository] for the persisted
+    // state and the invariants (a mute is never recorded if it would leave an app with
+    // nothing to patch from).
+
+    /**
+     * The enabled sources actually offered for [packageName]: [getEnabledSourcesSync] with
+     * any sources [packageName] has been muted from removed — unless removing them would
+     * leave nothing behind, in which case every enabled source is offered as a fallback
+     * (see [withoutMutedSources]).
+     */
+    suspend fun effectiveSourcesFor(packageName: String): List<PatchSource> {
+        val muted = sourceMuteRepository.getMutedFor(packageName)
+        return cachedEnabledSources.withoutMutedSources(muted) { it.id }
+    }
+
+    suspend fun isSourceMutedForApp(packageName: String, sourceId: String): Boolean =
+        sourceId in sourceMuteRepository.getMutedFor(packageName)
+
+    suspend fun mutedSourceIdsForApp(packageName: String): Set<String> =
+        sourceMuteRepository.getMutedFor(packageName)
+
+    /**
+     * Mutes [sourceId] for [packageName], unless doing so would leave the app with nothing
+     * to patch from — the same "last usable source" protection as Manager's `appsToKeepFrom`.
+     * Returns false (and does nothing) when it would.
+     *
+     * @param coveredByThisApp The set of enabled source ids that actually have a patch
+     *   targeting [packageName] (e.g. from `EnabledSourcesLoader.Result.guiPatchesBySource`
+     *   filtered by `Patch.compatiblePackages`), when the caller has already computed it.
+     *   Precise: matches Manager's `appsToKeepFrom` exactly. When omitted, falls back to
+     *   "does this app have more than one *enabled* source at all" — a safe but coarser
+     *   approximation (it can't tell a source with no matching patch from one that does),
+     *   used by call sites that haven't loaded per-app coverage.
+     */
+    suspend fun muteSourceForApp(
+        packageName: String,
+        sourceId: String,
+        coveredByThisApp: Set<String>? = null,
+    ): Boolean {
+        if (coveredByThisApp != null) {
+            val alreadyMuted = sourceMuteRepository.getMutedFor(packageName)
+            val keep = appsToKeepFrom(
+                sourceId = sourceId,
+                apps = setOf(packageName),
+                coveredBy = mapOf(packageName to coveredByThisApp),
+                keptFrom = mapOf(packageName to alreadyMuted),
+            )
+            if (packageName !in keep) return false
+        } else {
+            val currentlyOffered = effectiveSourcesFor(packageName).map { it.id }.toSet()
+            if (currentlyOffered.size <= 1 && sourceId in currentlyOffered) return false
+        }
+        sourceMuteRepository.mute(packageName, sourceId)
+        return true
+    }
+
+    suspend fun unmuteSourceForApp(packageName: String, sourceId: String) =
+        sourceMuteRepository.unmute(packageName, sourceId)
+
+    suspend fun unmuteAllSourcesForApp(packageName: String) =
+        sourceMuteRepository.unmuteAll(packageName)
 
     /**
      * Persist a new source ordering. Order affects only the display-name

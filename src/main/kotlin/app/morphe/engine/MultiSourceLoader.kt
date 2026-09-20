@@ -5,6 +5,8 @@
 
 package app.morphe.engine
 
+import app.morphe.engine.patches.PatchBundleHeldBackException
+import app.morphe.engine.patches.PatchBundleLoadGuard
 import app.morphe.patcher.patch.Patch
 import app.morphe.patcher.patch.loadPatchesFromJar
 import kotlinx.coroutines.Dispatchers
@@ -29,6 +31,14 @@ import java.util.logging.Logger
 object MultiSourceLoader {
 
     private val logger = Logger.getLogger(this::class.java.name)
+
+    // Shared across every source: state is keyed per sourceId internally, and a bundle
+    // held back for repeatedly crashing the app must stay held back regardless of which
+    // load call (quick-patch, expert mode, a manual refresh) happens to trigger it next.
+    private val loadGuard = PatchBundleLoadGuard(MorpheData.patchesDir)
+
+    /** Drops any remembered load-crash state for [sourceId] — call when a source is removed. */
+    fun forgetLoadGuardState(sourceId: String) = loadGuard.forget(sourceId)
 
     data class SourceInput(
         val sourceId: String,
@@ -88,7 +98,12 @@ object MultiSourceLoader {
         val tempCopy = File.createTempFile("morphe-mp-${input.sourceId}-", ".mpp")
         try {
             input.patchFile.copyTo(tempCopy, overwrite = true)
-            val patches = loadPatchesFromJar(setOf(tempCopy))
+            // Attributed to input.patchFile (the real source file, not the temp copy) so a
+            // crash is remembered against the bundle's actual identity, and so a replaced
+            // file — different size/mtime — clears any prior strikes on its own.
+            val patches = loadGuard.read(input.sourceId, input.patchFile) {
+                loadPatchesFromJar(setOf(tempCopy))
+            }
             logger.info("MultiSourceLoader: loaded ${patches.size} patches from '${input.sourceName}'")
             LoadedSource(
                 sourceId = input.sourceId,
@@ -106,11 +121,18 @@ object MultiSourceLoader {
             // Do NOT swallow the real failure: many Errors have a null .message (e.g.
             // ExceptionInInitializerError) with the useful text on .cause. We always store an
             // exception whose message walks the full cause chain, and log the full stack.
-            val versionMsg = PatcherCompatibility.incompatibilityMessage(input.patchFile)
-            val error: Throwable = if (versionMsg != null) {
-                PatchBundleIncompatibleException(versionMsg)
+            val error: Throwable = if (e is PatchBundleHeldBackException) {
+                // Already a clear, user-facing message; don't run it through the generic
+                // incompatibility/readableMessage paths below, which are about a different
+                // failure mode (a bundle built against a newer/older patcher).
+                e
             } else {
-                PatchSourceLoadException(e.readableMessage(), e)
+                val versionMsg = PatcherCompatibility.incompatibilityMessage(input.patchFile)
+                if (versionMsg != null) {
+                    PatchBundleIncompatibleException(versionMsg)
+                } else {
+                    PatchSourceLoadException(e.readableMessage(), e)
+                }
             }
             logger.log(
                 Level.WARNING,

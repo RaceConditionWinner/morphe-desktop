@@ -14,10 +14,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import app.morphe.engine.model.PatchedAppRecord
-import app.morphe.gui.data.model.PatchSource
-import app.morphe.gui.data.model.PatchSourceType
+import app.morphe.gui.data.repository.PatchPreferencesRepository
 import app.morphe.gui.data.repository.PatchSourceManager
-import app.morphe.gui.ui.components.AddPatchSourceDialog
 import app.morphe.gui.ui.components.MorpheBanners
 import app.morphe.gui.ui.components.MorpheErrorBar
 import app.morphe.gui.ui.components.SourceLedState
@@ -29,7 +27,6 @@ import app.morphe.gui.ui.screens.home.components.FullScreenDropZone
 import app.morphe.gui.ui.screens.home.components.HeaderBar
 import app.morphe.gui.ui.screens.home.components.MiddleContent
 import app.morphe.gui.ui.screens.home.components.MultiSourceHintBanner
-import app.morphe.gui.ui.screens.home.components.PatchedAppDetailDialog
 import app.morphe.gui.ui.screens.home.components.RepatchMissingApkDialog
 import app.morphe.gui.ui.screens.home.components.SourcesFailedBanner
 import app.morphe.gui.ui.screens.home.components.SupportedAppsListPane
@@ -37,6 +34,7 @@ import app.morphe.gui.ui.screens.home.components.UninstallConfirmDialog
 import app.morphe.gui.ui.screens.home.components.VersionWarningDialog
 import app.morphe.gui.ui.screens.patches.PatchSelectionScreen
 import app.morphe.gui.util.EnabledSourcesLoader
+import app.morphe.gui.util.FileUtils
 import app.morphe.gui.util.MorpheFilePicker
 import app.morphe.gui.util.VersionStatus
 import app.morphe.gui.util.sourceChannelMap
@@ -49,9 +47,7 @@ import cafe.adriel.voyager.koin.koinScreenModel
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.navigator.currentOrThrow
-import java.awt.Desktop
 import java.io.File
-import java.util.UUID
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
@@ -76,6 +72,7 @@ fun HomeScreenContent(
 
     val coroutineScope = rememberCoroutineScope()
     val patchSourceManager: PatchSourceManager = koinInject()
+    val patchPreferencesRepository: PatchPreferencesRepository = koinInject()
     val allSources by patchSourceManager.allSources.collectAsState()
 
     var showSourceManagementSheet by rememberSaveable { mutableStateOf(false) }
@@ -117,22 +114,13 @@ fun HomeScreenContent(
     }
     val onRepatch: (String) -> Unit = onRepatch@{ pkg ->
         val record = viewModel.getPatchedRecord(pkg) ?: return@onRepatch
+        // HomeViewModel hands out records whose input path is already resolved to the
+        // Morphe-managed original when one exists, so this never prefers a stale copy in
+        // the user's own folders. Only when nothing usable is left do we ask for the APK.
         if (File(record.inputApkPath).exists()) {
             repatchWithApk(record, record.inputApkPath)
         } else {
-            // The user's own copy of the input APK is gone (moved, cleaned up, a
-            // temp download folder emptied) — before falling back to asking them
-            // to re-select it, check whether a copy was retained at patch time
-            // (see OriginalApkRepository). Silent on a miss: that dialog is
-            // already the correct fallback and needs no extra messaging.
-            coroutineScope.launch {
-                val archived = viewModel.findOriginalApkPath(pkg)
-                if (archived != null) {
-                    repatchWithApk(record, archived)
-                } else {
-                    repatchMissingRecord = record
-                }
-            }
+            repatchMissingRecord = record
         }
     }
 
@@ -179,104 +167,61 @@ fun HomeScreenContent(
         )
     }
 
-    // Phase 7. Tap a "Your apps" row to see the full recall breakdown.
+    // Tap a "Your apps" row to see the Manager-style installed-app info dialog.
     var detailRecord by remember { mutableStateOf<PatchedAppRecord?>(null) }
     val onShowDetail: (PatchedAppRecord) -> Unit = { detailRecord = it }
-    var bundleVersionsBySource by remember { mutableStateOf(emptyMap<String, List<BundleRelease>>()) }
-    var showAddSourceDialog by remember { mutableStateOf(false) }
-    var preparingPatch by remember { mutableStateOf(false) }
-    var patchPrepProgress by remember { mutableStateOf<Pair<String, Float>?>(null) }
-    val activeSources = viewModel.activePatchSources()
-    LaunchedEffect(detailRecord?.packageName, activeSources.map { it.name }) {
-        if (detailRecord == null) return@LaunchedEffect
-        bundleVersionsBySource = activeSources.associate { src ->
-            src.name to viewModel.availableBundleVersions(src.name)
-        }
-    }
-    if (showAddSourceDialog) {
-        AddPatchSourceDialog(
-            isQuickMode = false,
-            onDismiss = { showAddSourceDialog = false },
-            onAdd = { source ->
-                showAddSourceDialog = false
-                coroutineScope.launch {
-                    patchSourceManager.addSource(source)
-                    viewModel.retryLoadPatches()
-                }
-            },
-        )
-    }
     detailRecord?.let { record ->
         val updateInfo = remember(record) { viewModel.recallUpdateInfo(record) }
-        PatchedAppDetailDialog(
+        var mutedSourceIds by remember(record.packageName) { mutableStateOf<Set<String>>(emptySet()) }
+        LaunchedEffect(record.packageName) {
+            mutedSourceIds = patchSourceManager.mutedSourceIdsForApp(record.packageName)
+        }
+        InstalledAppInfoDialog(
             record = record,
             state = uiState.patchedStates[record.packageName] ?: PatchedAppState.PATCHED,
             deviceInfo = uiState.deviceAppInfo[record.packageName],
             updateInfo = updateInfo,
-            supportedApp = uiState.supportedApps.find { it.packageName == record.packageName },
-            activeSources = activeSources,
-            allSources = allSources,
-            bundleVersionsBySource = bundleVersionsBySource,
-            onSetSourceEnabled = { id, enabled ->
-                coroutineScope.launch {
-                    patchSourceManager.setSourceEnabled(id, enabled)
-                    viewModel.retryLoadPatches()
-                }
-            },
-            onAddSource = { showAddSourceDialog = true },
-            onAddLocalBundle = { path ->
-                coroutineScope.launch {
-                    patchSourceManager.addSource(
-                        PatchSource(
-                            id = UUID.randomUUID().toString(),
-                            name = File(path).nameWithoutExtension,
-                            type = PatchSourceType.LOCAL,
-                            filePath = path,
-                        )
-                    )
-                    viewModel.retryLoadPatches()
-                }
-            },
-            onResolveApkVersion = { path -> viewModel.apkVersionOf(path) },
-            onIsBundleCached = { name, tag -> viewModel.isBundleCached(name, tag) },
-            onSupportedAppFor = { pkg, overrides -> viewModel.supportedAppFor(pkg, overrides) },
-            onDownloadBundle = { name, tag, onProgress -> viewModel.downloadBundle(name, tag, onProgress) },
             onDismiss = { detailRecord = null },
             onRepatch = { onRepatch(record.packageName) },
-            preparingPatch = preparingPatch,
-            patchPrepProgress = patchPrepProgress,
-            onPatchWith = { apkPath, overrides ->
-                coroutineScope.launch {
-                    preparingPatch = true
-                    patchPrepProgress = null
-                    try {
-                        viewModel.resolvePatchFiles(overrides) { name, pct ->
-                            patchPrepProgress = name to pct
-                        }
-                            .onSuccess { (files, names) ->
-                                detailRecord = null
-                                launchPatch(record, apkPath, files, names)
-                            }
-                            .onFailure {
-                                viewModel.showError(it.message ?: "Couldn't resolve patch files.")
-                            }
-                    } finally {
-                        preparingPatch = false
-                        patchPrepProgress = null
-                    }
-                }
-            },
+            onUpdate = { viewModel.prepareUpdate(record) },
             onForget = { onForget(record.packageName) },
             onOpenFolder = {
-                runCatching {
-                    val parent = File(record.outputApkPath).parentFile
-                    if (parent != null && parent.exists()) Desktop.getDesktop().open(parent)
-                }
+                FileUtils.revealInFileManager(File(record.outputApkPath).parentFile)
             },
             onInstall = { viewModel.installPatchedApp(record.packageName) },
             onUninstall = { onUninstall(record.packageName) },
             installing = uiState.installingPackage == record.packageName,
             uninstalling = uiState.uninstallingPackage == record.packageName,
+            appIconColorHex = uiState.supportedApps.firstOrNull { it.packageName == record.packageName }?.appIconColor,
+            mutedSourceIds = mutedSourceIds,
+            onToggleSourceMute = { sourceId ->
+                coroutineScope.launch {
+                    // record.patchSelectionByBundle's keys are exactly the sources that
+                    // applied a patch to this app — real per-app coverage, not just "every
+                    // enabled source" — so the precise appsToKeepFrom-based last-source
+                    // protection in muteSourceForApp applies rather than its coarser fallback.
+                    if (sourceId in mutedSourceIds) {
+                        patchSourceManager.unmuteSourceForApp(record.packageName, sourceId)
+                    } else {
+                        patchSourceManager.muteSourceForApp(
+                            packageName = record.packageName,
+                            sourceId = sourceId,
+                            coveredByThisApp = record.patchSelectionByBundle.keys,
+                        )
+                    }
+                    mutedSourceIds = patchSourceManager.mutedSourceIdsForApp(record.packageName)
+                }
+            },
+            onResetSelections = {
+                coroutineScope.launch {
+                    // Clears saved patch choices for this app across every source — the
+                    // next patch of it starts from each bundle's own .mpp defaults rather
+                    // than whatever was picked last time. Does not touch the patched
+                    // history record itself (that's "Forget", a separate action) or any
+                    // file on disk — just the remembered selection.
+                    patchPreferencesRepository.resetForApp(record.packageName)
+                }
+            },
         )
     }
 

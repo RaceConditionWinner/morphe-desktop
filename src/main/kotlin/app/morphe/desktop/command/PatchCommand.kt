@@ -392,7 +392,7 @@ internal object PatchCommand : Callable<Int> {
         // region Setup
 
         // Default output uses the unified scheme shared with the GUI:
-        //   <input.parent>/<appLabel>/<appLabel>-Morphe-{apkVer}-patches-{patchesVer}.apk
+        //   <morphe>/patched_apks/<appLabel>/<appLabel>-{apkVer}-patches-{patchesVer}.apk
         // The folder name uses the APK's human-friendly label (e.g. "Youtube")
         // when readable from the manifest, falling back to the filename for
         // corrupt or unparseable APKs. GUI populates this from apkInfo;
@@ -742,7 +742,20 @@ internal object PatchCommand : Callable<Int> {
                         val resolvedName = enabledSel.selector.name?.let { userInput ->
                             patchesList.firstOrNull { it.name.equals(userInput, ignoreCase = true) }?.name
                                 ?: userInput
-                        } ?: patchesList[enabledSel.selector.index!!].name!!
+                        } ?: run {
+                            // --ei index is user-supplied and unvalidated up to this point; an
+                            // out-of-range value would otherwise surface as a raw
+                            // IndexOutOfBoundsException with no indication of which flag or
+                            // bundle caused it.
+                            val index = enabledSel.selector.index!!
+                            val byIndex = patchesList.getOrNull(index)
+                                ?: throw IllegalArgumentException(
+                                    "--ei $index is out of range for bundle " +
+                                        "'${bundleArg.patchesFile.name}' (it has ${patchesList.size} " +
+                                        "patch(es), valid indices 0..${patchesList.size - 1})",
+                                )
+                            byIndex.name!!
+                        }
                         resolvedName to enabledSel.options
                     }
 

@@ -150,7 +150,7 @@ internal fun RepatchMissingApkDialog(
     val scope = rememberCoroutineScope()
     MorpheDialogCard(onDismiss = onDismiss, title = "Original APK not found") {
         MorpheDialogText(
-            "The input APK for ${record.displayName} is no longer at:\n" +
+            "The original APK for ${record.displayName} is no longer at:\n" +
                 "${record.inputApkPath}\n\nSelect the APK again to repatch with your saved settings."
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {

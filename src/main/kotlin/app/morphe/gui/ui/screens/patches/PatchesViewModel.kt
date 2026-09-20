@@ -10,6 +10,7 @@ import app.morphe.engine.model.Release
 import app.morphe.engine.model.ReleaseAsset
 import app.morphe.gui.data.model.FollowMode
 import app.morphe.gui.util.newerRelease
+import app.morphe.gui.util.compareVersions
 import app.morphe.gui.data.model.SourceVersionPref
 import app.morphe.gui.data.repository.ConfigRepository
 import app.morphe.gui.data.repository.PatchRepository
@@ -147,11 +148,11 @@ class PatchesViewModel(
                     val cachedFiles = findAllCachedPatchFiles()
                     if (cachedFiles.isNotEmpty()) {
                         val offlineReleases = cachedFiles.mapNotNull { buildOfflineRelease(it) }
-                            .sortedByDescending { rel ->
-                                val version = rel.tagName.removePrefix("v")
-                                parseVersionParts(version)
-                                    .fold(0L) { acc, part -> acc * 10000 + part }
-                            }
+                            // compareVersions ranks a stable release above a dev/pre-release
+                            // of the same base (e.g. 1.4.0 above 1.4.0-dev.5) — the naive
+                            // "fold version parts into one number" this replaced did not,
+                            // since it read [1,4,0,5] as simply greater than [1,4,0].
+                            .sortedWith { a, b -> compareVersions(b.tagName, a.tagName) }
                         val activeSource = patchSourceManager?.getActiveSource()
                         val activeSourceId = activeSource?.id
                         val pref = activeSourceId?.let { configRepository.getSourceVersionPrefs()[it] }
@@ -243,14 +244,6 @@ class PatchesViewModel(
     }
 
     private val versionRegex = Regex("""(\d+\.\d+\.\d+(?:-dev\.\d+)?)""")
-
-    /**
-     * Parse semantic version parts for comparison.
-     * "1.13.0" -> [1, 13, 0], "1.4.0-dev.5" -> [1, 4, 0, 5]
-     */
-    private fun parseVersionParts(version: String): List<Int> {
-        return version.replace("-dev.", ".").split(".").mapNotNull { it.toIntOrNull() }
-    }
 
     /**
      * Build a synthetic Release from a cached .mpp file for offline display.

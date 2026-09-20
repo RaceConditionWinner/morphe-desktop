@@ -7,17 +7,14 @@ package app.morphe.gui.ui.screens.patching
 
 import app.morphe.engine.MorpheComponents
 import app.morphe.engine.MorpheData
-import app.morphe.engine.OriginalApkRepository
-import app.morphe.engine.PatchedAppStore
 import app.morphe.engine.UpdateChecker
-import app.morphe.engine.model.PatchedAppRecord
 import app.morphe.engine.util.ApkManifestReader
-import app.morphe.engine.util.FileChecksum
 import app.morphe.gui.data.model.PatchConfig
 import app.morphe.gui.data.repository.ConfigRepository
 import app.morphe.gui.util.Logger
 import app.morphe.gui.util.PatchResult
 import app.morphe.gui.util.PatchService
+import app.morphe.gui.util.PatchedAppRecorder
 import app.morphe.gui.util.PatcherLogInterceptor
 import app.morphe.gui.util.PatcherState
 import cafe.adriel.voyager.core.model.ScreenModel
@@ -33,7 +30,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import oshi.SystemInfo
 import oshi.software.os.OSProcess
 
@@ -41,8 +37,7 @@ class PatchingViewModel(
     private val config: PatchConfig,
     private val patchService: PatchService,
     private val configRepository: ConfigRepository,
-    private val patchedAppStore: PatchedAppStore,
-    private val originalApkRepository: OriginalApkRepository,
+    private val patchedAppRecorder: PatchedAppRecorder,
 ) : ScreenModel {
 
     private val _uiState = MutableStateFlow(PatchingUiState())
@@ -241,53 +236,22 @@ class PatchingViewModel(
     }
 
     /**
-     * Record this patch in the shared patched-app history (see [PatchedAppStore]).
-     * Best-effort: a history-write failure must never disrupt the success UX.
+     * Hand the original APK over to Morphe and record this patch in the shared
+     * patched-app history — see [PatchedAppRecorder]. The patch itself has already
+     * succeeded, so a failure here is a warning, never a failed patch.
      */
     private suspend fun recordPatchedApp(patchResult: PatchResult) {
-        try {
-            val pkg = config.packageName.ifEmpty { patchResult.packageName }
-            if (pkg.isEmpty()) return // nothing useful to key on
-            val (sha, size) = withContext(Dispatchers.IO) {
-                FileChecksum.fingerprintOrNull(config.outputApkPath)
-            }
-            // Read the output APK's manifest once: post-rename package (for device
-            // matching) + versionName (fallback so the APK version number always shows).
-            val manifest = withContext(Dispatchers.IO) {
-                runCatching { ApkManifestReader.read(File(config.outputApkPath)) }.getOrNull()
-            }
-            patchedAppStore.upsert(
-                PatchedAppRecord(
-                    packageName = pkg,
-                    currentPackageName = manifest?.packageName,
-                    displayName = config.appDisplayName.ifEmpty { pkg },
-                    // Prefer the manifest's versionName (e.g. "21.20.400"). The patch
-                    // result's packageVersion can be the numeric versionCode, which breaks
-                    // version comparisons for update detection.
-                    apkVersion = manifest?.versionName?.takeIf { it.isNotBlank() } ?: patchResult.packageVersion,
-                    apkVersionCode = manifest?.versionCode,
-                    inputApkPath = config.inputApkPath,
-                    outputApkPath = config.outputApkPath,
-                    outputApkSha256 = sha,
-                    outputApkSize = size,
-                    patchSelectionByBundle = config.patchSelectionByBundle,
-                    patchOptionValues = config.patchOptions,
-                    sourcesSnapshot = config.sourcesSnapshot,
-                    patchedAt = System.currentTimeMillis(),
-                    patchedWithMorpheVersion = UpdateChecker.currentVersion() ?: "unknown",
-                )
-            )
-            // Best-effort, same "never disrupt the success UX" contract as this whole
-            // function. Uses the same resolved package/version just written above, so
-            // a later repatch of pkg can find its way back to the exact input this
-            // patch used even if the user's own copy of that file is gone by then.
-            originalApkRepository.saveOriginalApk(
-                packageName = pkg,
-                version = manifest?.versionName?.takeIf { it.isNotBlank() } ?: patchResult.packageVersion,
-                sourceFile = File(config.inputApkPath),
-            )
-        } catch (e: Exception) {
-            Logger.error("Failed to record patched app", e)
+        patchedAppRecorder.record(
+            packageName = config.packageName,
+            displayName = config.appDisplayName,
+            inputApk = File(config.inputApkPath),
+            outputApk = File(config.outputApkPath),
+            patchResult = patchResult,
+            sourcesSnapshot = config.sourcesSnapshot,
+            patchSelectionByBundle = config.patchSelectionByBundle,
+            patchOptionValues = config.patchOptions,
+        ).onFailure {
+            addLog("Patched, but couldn't save it to Your apps: ${it.message}", LogLevel.WARNING)
         }
     }
 

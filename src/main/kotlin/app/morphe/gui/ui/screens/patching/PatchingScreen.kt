@@ -68,7 +68,6 @@ import cafe.adriel.voyager.koin.koinScreenModel
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.navigator.currentOrThrow
-import java.awt.Desktop
 import java.awt.datatransfer.StringSelection
 import java.io.File
 import kotlin.time.Duration.Companion.milliseconds
@@ -578,13 +577,7 @@ fun LogFileViewerDialog(
                             .clip(RoundedCornerShape(corners.small))
                             .background(openBg)
                             .clickable {
-                                try {
-                                    if (Desktop.isDesktopSupported()) {
-                                        Desktop.getDesktop().open(file.parentFile)
-                                    }
-                                } catch (e: Exception) {
-                                    Logger.error("Failed to open logs folder", e)
-                                }
+                                FileUtils.revealInFileManager(file.parentFile)
                             }
                             .padding(horizontal = 10.dp, vertical = 6.dp)
                     ) {

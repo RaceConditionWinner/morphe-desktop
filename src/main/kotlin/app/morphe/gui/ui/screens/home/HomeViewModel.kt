@@ -285,12 +285,12 @@ class HomeViewModel(
         _uiState.value = _uiState.value.copy(uninstallingPackage = packageName)
         screenModelScope.launch {
             val result = adbManager.uninstallApk(record.installedPackageName, device.id)
-            if (result.isSuccess && alsoForget) {
-                patchedAppStore.delete(packageName)
-            }
+            val forgetFailure = if (result.isSuccess && alsoForget) deleteRecord(packageName) else null
             _uiState.value = _uiState.value.copy(
                 uninstallingPackage = null,
-                error = result.exceptionOrNull()?.let { "Uninstall failed: ${it.message}" } ?: _uiState.value.error,
+                error = result.exceptionOrNull()?.let { "Uninstall failed: ${it.message}" }
+                    ?: forgetFailure?.let { "Uninstalled, but couldn't remove it from Your apps: ${it.message}" }
+                    ?: _uiState.value.error,
             )
             refreshDeviceInfo()
         }
@@ -508,22 +508,6 @@ class HomeViewModel(
         patchedRecordsByPackage[packageName]
 
     /**
-     * The archived original APK for [packageName]'s input, if one was retained
-     * (see [OriginalApkRepository]) and its file is still present on disk. Used
-     * by the repatch flow when [PatchedAppRecord.inputApkPath] no longer exists
-     * (the user's own copy was moved/deleted) — a fallback to asking the user
-     * to re-select the file, not a replacement for it: this can itself return
-     * null (retention disabled, or the archived copy has since gone missing
-     * too), in which case the caller still needs that manual fallback.
-     */
-    suspend fun findOriginalApkPath(packageName: String): String? {
-        val archived = originalApkRepository.get(packageName) ?: return null
-        if (!File(archived.filePath).exists()) return null
-        originalApkRepository.markUsed(packageName)
-        return archived.filePath
-    }
-
-    /**
      * Compute per-source patch-file freshness + app-version freshness for [record],
      * comparing the snapshot it was patched with against the currently resolved
      * sources and the supported app's recommended/experimental versions. The app
@@ -650,7 +634,21 @@ class HomeViewModel(
      */
     fun forgetPatchedApp(packageName: String) {
         // delete() emits a change → the store observer refreshes badges/device state.
-        screenModelScope.launch { patchedAppStore.delete(packageName) }
+        screenModelScope.launch {
+            deleteRecord(packageName)?.let { showError("Couldn't remove it from Your apps: ${it.message}") }
+        }
+    }
+
+    /** Deletes the history record for [packageName]. Returns the failure if it couldn't be
+     *  persisted (the record is then still there), or null on success. */
+    private suspend fun deleteRecord(packageName: String): Exception? = try {
+        patchedAppStore.delete(packageName)
+        null
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        Logger.error("Failed to remove $packageName from the patched-app history", e)
+        e
     }
 
     /**
@@ -697,7 +695,7 @@ class HomeViewModel(
     private suspend fun computePatchedStates(
         apps: List<SupportedApp>,
     ): Map<String, PatchedAppState> = try {
-        val records = patchedAppStore.getAll().associateBy { it.packageName }
+        val records = patchedAppStore.getAll().map { withResolvedInput(it) }.associateBy { it.packageName }
         patchedRecordsByPackage = records
         // Compare each record's patch-time snapshot against the LATEST AVAILABLE
         // source version (not just what's currently downloaded) so "update
@@ -727,6 +725,26 @@ class HomeViewModel(
     } catch (e: Exception) {
         Logger.error("Failed to compute patched-app states", e)
         emptyMap()
+    }
+
+    /**
+     * [record] with [PatchedAppRecord.inputApkPath] set to the original a repatch should read,
+     * per [OriginalApkRepository.resolveInputApk] (the Morphe-managed copy first). Records saved
+     * since archives became canonical already name it; this presents older ones, which still name
+     * the user's own file, the same way, so every consumer (row, detail dialog, repatch) agrees.
+     * Read-side only: nothing is persisted. When no original is usable the recorded path is kept
+     * so the "not found" dialog can still show where it was.
+     */
+    private suspend fun withResolvedInput(record: PatchedAppRecord): PatchedAppRecord {
+        val resolved = try {
+            originalApkRepository.resolveInputApk(record)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Logger.warn("Could not resolve the original APK for ${record.packageName}: ${e.message}")
+            null
+        } ?: return record
+        return if (resolved.absolutePath == record.inputApkPath) record else record.copy(inputApkPath = resolved.absolutePath)
     }
 
     suspend fun apkVersionOf(path: String): String? = withContext(Dispatchers.IO) {
@@ -1011,6 +1029,9 @@ class HomeViewModel(
      * PatchesScreen). Called when returning to HomeScreen from another screen.
      */
     fun refreshPatchesIfNeeded() {
+        // A patch that just finished moved the selected APK into Morphe's managed storage,
+        // so the selection would now point at a file that's gone.
+        if (_uiState.value.selectedApk?.exists() == false) clearSelection()
         screenModelScope.launch {
             val saved = configRepository.getSourceVersionPrefs()
             if (saved != lastLoadedVersionsBySource) {

@@ -78,7 +78,7 @@ internal fun OutputFolderSection(
                 contentAlignment = Alignment.CenterStart
             ) {
                 Text(
-                    text = outputDir?.name ?: "APK's folder (default)",
+                    text = outputDir?.name ?: "patched_apks (default)",
                     fontSize = 11.sp,
                     fontFamily = font,
                     fontWeight = FontWeight.Normal,

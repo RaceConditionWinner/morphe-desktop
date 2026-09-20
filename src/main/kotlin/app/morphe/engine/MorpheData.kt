@@ -22,13 +22,16 @@ import java.util.logging.Logger
  * would get wiped by `./gradlew clean`. Also covers the (rare) case of a
  * read-only JAR install location.
  *
- * Layout once populated:
+ * Layout once populated (portable install):
  * ```
+ * morphe-desktop-<version>-all.jar
+ * patched_apks/{appName}/                        # default output for patched APKs (user-facing)
  * morphe-data/
  *   patches/{owner}-{repo}/v1.5.0__patches.mpp   # downloaded .mpp files
  *   logs/                                        # app logs
  *   avatars/{urlHash}.avatar                     # cached patch-source owner avatars
  *   icons/{packageName}/                         # user-created custom app icons (persistent)
+ *   original-apks/                               # Morphe-managed original APKs, used for repatching
  *   config.json                                  # GUI preferences + sources
  *   tmp/patching-{timestamp}/                    # per-session patcher scratch
  *   morphe.keystore                              # shared default signing key
@@ -86,14 +89,22 @@ object MorpheData {
     val tmpDir: File by lazy { File(root, "tmp").also { it.mkdirs() } }
 
     /**
-     * Retained pre-patch (original) APKs, one per package+version, for reuse on
-     * a later repatch — see `app.morphe.engine.OriginalApkRepository`. Ported
+     * Morphe-managed pre-patch (original) APKs, one per package, the canonical input
+     * for a later repatch — see `app.morphe.engine.OriginalApkRepository`. Ported
      * concept from morphe-manager's `Filesystem.originalApksDir`. Deliberately
-     * NOT wiped by clear-cache: losing it costs the user a re-locate-the-file
-     * step, not disposable cache content, so clearing caches shouldn't
-     * silently make "repatch" harder.
+     * NOT wiped by clear-cache: after a patch this holds the only copy of the
+     * user's original file, so it isn't disposable cache content.
      */
     val originalApksDir: File by lazy { File(root, "original-apks").also { it.mkdirs() } }
+
+    /**
+     * Default destination for patched APKs, used when the user hasn't configured an
+     * output folder. Deliberately kept apart from [root]: these are user-facing
+     * deliverables, not app data. In the portable layout it sits beside the JAR
+     * (`<bundleRoot>/patched_apks`); with no bundle (fallback / IDE /
+     * `MORPHE_DATA_DIR`) it is `<root>/patched_apks`.
+     */
+    val patchedApksDir: File by lazy { File(bundleRoot ?: root, "patched_apks").also { it.mkdirs() } }
 
     /**
      * Last-known-good copy of the remote patch-source blocklist (see

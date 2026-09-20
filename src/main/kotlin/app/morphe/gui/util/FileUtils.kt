@@ -7,6 +7,7 @@ package app.morphe.gui.util
 
 import app.morphe.engine.MorpheData
 import app.morphe.engine.util.BundleFormats
+import java.awt.Desktop
 import java.io.File
 import java.util.zip.ZipFile
 
@@ -41,6 +42,34 @@ object FileUtils {
 
     /** Returns the cached patch-source avatars directory. */
     fun getAvatarsDir(): File = MorpheData.avatarsDir
+
+    /**
+     * Opens [folder] in the system file manager, tolerating every way this can fail: no
+     * desktop integration available (headless/some Linux WMs), the platform not supporting
+     * the OPEN action at all, or the folder not existing (a "reveal output" click after the
+     * file was moved/deleted outside Morphe). Every call site wants the exact same thing —
+     * best-effort, never worth crashing or interrupting the user over — so this exists
+     * once instead of copy-pasted try/catch(es) around `Desktop.getDesktop().open(...)`
+     * at each of the seven places that used to do this inline (some of which silently
+     * swallowed the failure instead of logging it).
+     *
+     * @return true if the request was actually made of the OS. False does not mean nothing
+     *   happened — the OS can still fail to find/launch a file manager after accepting the
+     *   request — it only means Morphe didn't even try.
+     */
+    fun revealInFileManager(folder: File?): Boolean {
+        if (folder == null || !folder.exists()) return false
+        return try {
+            if (!Desktop.isDesktopSupported() || !Desktop.getDesktop().isSupported(Desktop.Action.OPEN)) {
+                return false
+            }
+            Desktop.getDesktop().open(folder)
+            true
+        } catch (e: Exception) {
+            Logger.error("Failed to open folder in file manager: ${folder.absolutePath}", e)
+            false
+        }
+    }
 
     /** Returns the GUI config file path. */
     fun getConfigFile(): File = MorpheData.configFile

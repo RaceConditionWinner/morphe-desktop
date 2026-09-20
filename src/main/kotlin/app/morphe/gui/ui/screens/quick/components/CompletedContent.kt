@@ -38,7 +38,7 @@ import app.morphe.gui.ui.screens.quick.formatFileSize
 import app.morphe.gui.ui.theme.*
 import app.morphe.gui.util.AdbManager
 import app.morphe.gui.util.DeviceMonitor
-import java.awt.Desktop
+import app.morphe.gui.util.FileUtils
 import java.io.File
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
@@ -168,12 +168,7 @@ internal fun CompletedContent(
                                     RoundedCornerShape(corners.small)
                                 )
                                 .clickable {
-                                    try {
-                                        val folder = outputFile.parentFile
-                                        if (folder != null && Desktop.isDesktopSupported()) {
-                                            Desktop.getDesktop().open(folder)
-                                        }
-                                    } catch (_: Exception) {}
+                                    FileUtils.revealInFileManager(outputFile.parentFile)
                                 }
                                 .padding(horizontal = 14.dp, vertical = 8.dp),
                             contentAlignment = Alignment.Center

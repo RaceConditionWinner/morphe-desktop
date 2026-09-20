@@ -97,6 +97,10 @@ val LocalSharpCorners = compositionLocalOf<MutableState<Boolean>> {
     error("No LocalSharpCorners provided")
 }
 
+val LocalGroupPatchesByCategory = compositionLocalOf<MutableState<Boolean>> {
+    error("No LocalGroupPatchesByCategory provided")
+}
+
 /**
  * Auto-start ADB preference. Exposed as a composition local so the
  * SettingsDialog (writer) and DeviceIndicator + install buttons (readers)
@@ -161,6 +165,7 @@ private fun appContent(
     val backgroundTypeState = remember { mutableStateOf(BackgroundType.CIRCLES) }
     val appCardColorState = remember { mutableStateOf(AppCardColorConfig()) }
     val sharpCornersState = remember { mutableStateOf(false) }
+    val groupPatchesByCategoryState = remember { mutableStateOf(true) }
     val backgroundSpeedState = remember { mutableFloatStateOf(1f) }
     val patchingCompletedState = remember { mutableStateOf(false) }
 
@@ -181,6 +186,7 @@ private fun appContent(
             values = config.getAppCardColorValues(),
         )
         sharpCornersState.value = config.useSharpCorners
+        groupPatchesByCategoryState.value = config.groupPatchesByCategory
 
         autoStartAdb = config.autoStartAdb
         // Publish the initial active mode BEFORE the VMs subscribe so their
@@ -293,6 +299,7 @@ private fun appContent(
             LocalParallaxState provides parallaxState,
             LocalCustomAccentColor provides customAccentColorState,
             LocalSharpCorners provides sharpCornersState,
+            LocalGroupPatchesByCategory provides groupPatchesByCategoryState,
             LocalAppCardColors provides appCardColorState,
             LocalBackgroundSpeed provides backgroundSpeedState,
             LocalPatchingCompleted provides patchingCompletedState

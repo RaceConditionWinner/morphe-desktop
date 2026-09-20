@@ -59,7 +59,6 @@ import app.morphe.gui.util.Logger
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
-import java.awt.Desktop
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -1237,12 +1236,7 @@ private fun OutputFileCard(
                             RoundedCornerShape(corners.small)
                         )
                         .clickable {
-                            try {
-                                val folder = outputFile.parentFile
-                                if (folder != null && Desktop.isDesktopSupported()) {
-                                    Desktop.getDesktop().open(folder)
-                                }
-                            } catch (_: Exception) {}
+                            FileUtils.revealInFileManager(outputFile.parentFile)
                         }
                         .padding(horizontal = 14.dp, vertical = 8.dp),
                     contentAlignment = Alignment.Center

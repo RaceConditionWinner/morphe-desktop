@@ -26,8 +26,6 @@ import app.morphe.gui.ui.theme.LocalMorpheCorners
 import app.morphe.gui.util.AdbManager
 import app.morphe.gui.util.DeviceMonitor
 import app.morphe.gui.util.FileUtils
-import app.morphe.gui.util.Logger
-import java.awt.Desktop
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -173,13 +171,7 @@ internal fun PatchedAppRuntimeLogsSection(
                                 .clip(RoundedCornerShape(cornersLocal.small))
                                 .handCursor()
                                 .clickable {
-                                    try {
-                                        if (Desktop.isDesktopSupported()) {
-                                            Desktop.getDesktop().open(s.file.parentFile)
-                                        }
-                                    } catch (e: Exception) {
-                                        Logger.error("Failed to reveal logs folder", e)
-                                    }
+                                    FileUtils.revealInFileManager(s.file.parentFile)
                                 }
                                 .padding(horizontal = 10.dp, vertical = 6.dp)
                         )

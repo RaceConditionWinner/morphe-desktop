@@ -25,7 +25,6 @@ import app.morphe.gui.ui.theme.LocalMorpheFont
 import app.morphe.gui.ui.theme.MorpheColors
 import app.morphe.gui.util.FileUtils
 import app.morphe.gui.util.Logger
-import java.awt.Desktop
 
 /**
  * Tools dialog, the peer of [SettingsDialog]. One-off actions (open logs, open app
@@ -74,14 +73,7 @@ fun ToolsDialog(
                     font = font,
                     borderColor = borderColor,
                     onClick = {
-                        try {
-                            val logsDir = FileUtils.getLogsDir()
-                            if (Desktop.isDesktopSupported()) {
-                                Desktop.getDesktop().open(logsDir)
-                            }
-                        } catch (e: Exception) {
-                            Logger.error("Failed to open logs folder", e)
-                        }
+                        FileUtils.revealInFileManager(FileUtils.getLogsDir())
                     }
                 )
 
@@ -93,14 +85,7 @@ fun ToolsDialog(
                     font = font,
                     borderColor = borderColor,
                     onClick = {
-                        try {
-                            val appDataDir = FileUtils.getAppDataDir()
-                            if (Desktop.isDesktopSupported()) {
-                                Desktop.getDesktop().open(appDataDir)
-                            }
-                        } catch (e: Exception) {
-                            Logger.error("Failed to open app data folder", e)
-                        }
+                        FileUtils.revealInFileManager(FileUtils.getAppDataDir())
                     }
                 )
 

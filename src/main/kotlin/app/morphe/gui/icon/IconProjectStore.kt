@@ -5,6 +5,8 @@
 
 package app.morphe.gui.icon
 
+import app.morphe.engine.util.AtomicFiles
+import app.morphe.gui.util.Logger
 import kotlinx.serialization.json.Json
 import java.io.File
 
@@ -27,15 +29,17 @@ object IconProjectStore {
     private fun file(packageName: String) = File(IconExporter.projectDir(packageName), "project.json")
 
     fun save(project: IconProject, packageName: String) {
-        runCatching { file(packageName).writeText(json.encodeToString(IconProject.serializer(), project)) }
-            .onFailure { System.err.println("IconProjectStore.save failed: ${it.message}"); it.printStackTrace() }
+        val target = file(packageName)
+        // AtomicFiles.write creates the parent directory itself.
+        runCatching { AtomicFiles.write(target, json.encodeToString(IconProject.serializer(), project)) }
+            .onFailure { Logger.error("IconProjectStore.save failed for $packageName", it) }
     }
 
     fun load(packageName: String): IconProject? {
         val f = file(packageName)
         if (!f.exists()) return null
         return runCatching { json.decodeFromString(IconProject.serializer(), f.readText()) }
-            .onFailure { System.err.println("IconProjectStore.load failed: ${it.message}") }
+            .onFailure { Logger.error("IconProjectStore.load failed for $packageName", it) }
             .getOrNull()
     }
 }

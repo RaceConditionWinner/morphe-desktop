@@ -5,13 +5,7 @@
 
 package app.morphe.gui.ui.components
 
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.hoverable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,7 +14,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.compositionLocalOf
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,7 +28,6 @@ import androidx.compose.ui.unit.dp
 import app.morphe.gui.data.model.AppCardColorDefaults
 import app.morphe.gui.ui.theme.LocalAppCardColorResolver
 import app.morphe.gui.ui.theme.LocalMorpheCorners
-import app.morphe.gui.ui.theme.shiftLightness
 import app.morphe.gui.util.blend
 import app.morphe.gui.util.compositeOver
 import app.morphe.gui.util.requiresLightContent
@@ -43,6 +35,17 @@ import app.morphe.gui.util.requiresLightContent
 /**
  * The card's three-stop glass sweep. Every translucent layer costs a full blend pass over the
  * card, so the fill is one gradient rather than a stack of washes.
+ *
+ * These three alphas (and the border stops below) are the same values Manager's
+ * `AppCardLayout` uses — Manager is the source of truth for a card's resolved color, and
+ * unlike this file used to, nothing here should modify a color once it's resolved. Manager has
+ * no hover concept at all (touch input only); its own interaction source in `HomeAppCardLayout`
+ * drives a *press-scale* animation, never a color change. A hover-driven lightness lift lived
+ * here for a while and had no Manager counterpart — see git history — which is exactly why it
+ * could drift into "the card visibly changes color under the mouse" without that ever being a
+ * deliberate design decision on either platform. Removed rather than fixed: there's nothing to
+ * bring back into parity, because parity means this gradient is a pure function of the
+ * resolved palette, full stop.
  */
 private const val GLASS_START_ALPHA = 0.70f
 private const val GLASS_MID_ALPHA = 0.58f
@@ -50,9 +53,6 @@ private const val GLASS_END_ALPHA = 0.64f
 
 /** What the sweep averages out to, which is what its content actually lands on. */
 private const val GLASS_MEAN_ALPHA = (GLASS_START_ALPHA + GLASS_MID_ALPHA + GLASS_END_ALPHA) / 3f
-
-/** How far a hovered card lifts, in lightness. */
-private const val HOVER_LIFT = 0.03f
 
 /**
  * The colors a card's own content should draw itself in, chosen from the fill that content will
@@ -149,18 +149,6 @@ fun AppCard(
         AppCardInk.of(light = drawn.requiresLightContent())
     }
 
-    val hoverInteraction = remember { MutableInteractionSource() }
-    val isHovered by hoverInteraction.collectIsHoveredAsState()
-
-    val hoverProgress by animateFloatAsState(
-        targetValue = if (isHovered && interactive) 1f else 0f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioNoBouncy,
-            stiffness = Spring.StiffnessLow,
-        ),
-        label = "hover_progress",
-    )
-
     val shape = RoundedCornerShape(cornerRadius)
     val baseColor = colors.firstOrNull() ?: Color.White
     val midColor = colors.getOrElse(1) { baseColor }
@@ -169,20 +157,19 @@ fun AppCard(
     Box(
         modifier = modifier
             .clip(shape)
-            // Brushes are rebuilt only when the size, the palette or the hover lift changes, so
-            // scrolling a list of cards does not reallocate them on every frame
+            // Brushes are rebuilt only when the size or the palette changes, so scrolling a
+            // list of cards does not reallocate them on every frame
             .drawWithCache {
                 val w = size.width
                 val h = size.height
                 val cr = CornerRadius(cornerRadius.toPx())
-                val lift = hoverProgress * HOVER_LIFT
 
                 // One sweep from the bottom-start tint through to the top-end accent
                 val glass = Brush.linearGradient(
                     colors = listOf(
-                        baseColor.shiftLightness(lift).copy(alpha = GLASS_START_ALPHA),
-                        midColor.shiftLightness(lift).copy(alpha = GLASS_MID_ALPHA),
-                        endColor.shiftLightness(lift).copy(alpha = GLASS_END_ALPHA),
+                        baseColor.copy(alpha = GLASS_START_ALPHA),
+                        midColor.copy(alpha = GLASS_MID_ALPHA),
+                        endColor.copy(alpha = GLASS_END_ALPHA),
                     ),
                     start = Offset(0f, h),
                     end = Offset(w, 0f),
@@ -208,7 +195,6 @@ fun AppCard(
                     drawRoundRect(brush = border, cornerRadius = cr, style = borderStroke)
                 }
             }
-            .hoverable(hoverInteraction)
             .then(
                 if (interactive) {
                     Modifier.handCursor().clickable(onClick = onClick)

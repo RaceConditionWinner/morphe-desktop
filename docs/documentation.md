@@ -50,12 +50,17 @@ You can override the location entirely with the **`MORPHE_DATA_DIR`** environmen
 ```
 morphe-data/
   patches/         # cached .mpp patch bundles
+  original-apks/   # your original APKs, moved here after a successful GUI patch and reused for repatching
   logs/            # application logs
   tmp/             # per-run patching scratch (the default --temporary-files-path location)
   libs/            # GUI runtime (Skiko, JNA) downloaded on the first GUI launch
   morphe.keystore  # shared default signing key (see --keystore)
   config.json      # preferences + configured sources
 ```
+
+Patched APKs are **not** stored in `morphe-data/`. Unless you choose an output folder, they go to a **`patched_apks/`** folder beside the JAR (`<app>/<app>-<appVersion>-patches-<patchesVersion>.apk`), or inside the data root when there is no JAR-adjacent install (IDE / `~/morphe/` / `MORPHE_DATA_DIR`).
+
+After a successful patch in the GUI, Morphe **moves** the original APK you picked into `morphe-data/original-apks/` (it is copied and verified first, and your file is only removed once everything is saved; if anything fails, your file is left untouched). Repatching and updating then use that managed copy, so the file no longer needs to exist in your Downloads folder. A newer version of the same app replaces the previous original. Set `saveOriginalApks` to `false` in `config.json` to leave your files where they are.
 
 Both the GUI and the CLI use this folder. In the GUI you can open it from **Tools → Open App Data**. On the CLI, `--temporary-files-path` defaults to `tmp/` (override it to send scratch elsewhere) and `--keystore` defaults to `morphe.keystore` here.
 
@@ -394,7 +399,7 @@ The gear icon opens Settings – Morphe's persistent preferences. Think of it as
 | **Auto-cleanup temp files**    | Delete scratch files after patching                                                                       | On                                                                                   | On by default; `--disable-purge` to turn off                                               |
 | **Auto-start ADB**             | Start the ADB daemon on launch so devices are monitored                                                   | Off                                                                                  | enables`-i` / install features                                                             |
 | **Update channel**             | Stable or Dev app updates (dropdown menu)                                                                                 | Smart (Dev on dev builds, else Stable)                                               | `--prerelease` (loosely)                                                                   |
-| **Output folder**              | Default location for patched APKs                                                                         | The input APK's folder                                                               | `-o` / `--out`                                                                             |
+| **Output folder**              | Default location for patched APKs                                                                         | `patched_apks/` next to the JAR                                                      | `-o` / `--out`                                                                             |
 | **Signing**                    | Keystore + credentials used to sign                                                                       | Shared`morphe.keystore`, alias `Morphe`, key password `Morphe`, store password empty | `--keystore`, `--keystore-password`, `--keystore-entry-alias`, `--keystore-entry-password` |
 | **Strip Libs**                 | Native-lib architectures to keep                                                                          | Keep all                                                                             | `--striplibs`                                                                              |
 | **Patched app runtime logs**   | Capture logcat from a device after a patched app misbehaves                                               | –                                                                                    | –                                                                                          |
@@ -676,7 +681,7 @@ java -jar morphe-desktop-*-all.jar patch -p patches.mpp your_app.apk
 
 Required: No
 
-Default: a subfolder named after the app, created next to the input APK – `<app>/<app>-Morphe-<appVersion>-patches-<patchesVersion>.apk`
+Default: a subfolder named after the app inside Morphe's `patched_apks/` folder (next to the JAR) – `<app>/<app>-<appVersion>-patches-<patchesVersion>.apk`
 
 Specify a custom output path for the patched APK.
 

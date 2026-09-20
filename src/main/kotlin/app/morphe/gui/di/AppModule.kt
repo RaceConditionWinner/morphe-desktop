@@ -13,6 +13,7 @@ import app.morphe.gui.data.repository.ChangelogRepository
 import app.morphe.gui.data.repository.ConfigRepository
 import app.morphe.gui.data.repository.PatchPreferencesRepository
 import app.morphe.gui.data.repository.SeenPatchesRepository
+import app.morphe.gui.data.repository.SourceMuteRepository
 import app.morphe.gui.data.repository.PatchSourceManager
 import app.morphe.gui.data.repository.UpdateCheckRepository
 import app.morphe.gui.ui.screens.home.HomeViewModel
@@ -22,6 +23,7 @@ import app.morphe.gui.ui.screens.patching.PatchingViewModel
 import app.morphe.gui.ui.screens.quick.QuickPatchViewModel
 import app.morphe.gui.util.Logger as MorpheLogger
 import app.morphe.gui.util.PatchService
+import app.morphe.gui.util.PatchedAppRecorder
 import io.ktor.client.*
 import io.ktor.client.engine.okhttp.*
 import io.ktor.client.plugins.HttpTimeout
@@ -95,7 +97,8 @@ val appModule = module {
     single { PatchPreferencesRepository() }
     single { SeenPatchesRepository() }
     single { BlocklistRepository(get(), get()) }
-    single { PatchSourceManager(get(), get(), get()) }
+    single { SourceMuteRepository() }
+    single { PatchSourceManager(get(), get(), get(), get(), get()) }
     single { PatchService() }
     single { UpdateCheckRepository(get()) }
     single { ChangelogRepository(get()) }
@@ -105,6 +108,7 @@ val appModule = module {
         val configRepository = get<ConfigRepository>()
         OriginalApkRepository(isRetentionEnabled = { configRepository.loadConfig().saveOriginalApks })
     }
+    single { PatchedAppRecorder(get(), get()) }
 
     // ViewModels (ScreenModels)
     // ViewModels observe PatchSourceManager.sourceVersion and reload on source changes.
@@ -112,7 +116,7 @@ val appModule = module {
         HomeViewModel(get(), get(), get(), get(), get(), get(), get())
     }
     factory {
-        QuickPatchViewModel(get(), get(), get(), get(), get(), get(), get())
+        QuickPatchViewModel(get(), get(), get(), get(), get(), get())
     }
     factory { params ->
         val psm = get<PatchSourceManager>()
@@ -150,7 +154,6 @@ val appModule = module {
     factory { params ->
         PatchingViewModel(
             params.get(),
-            get(),
             get(),
             get(),
             get()

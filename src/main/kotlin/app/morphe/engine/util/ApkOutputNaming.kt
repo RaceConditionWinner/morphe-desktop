@@ -5,6 +5,7 @@
 
 package app.morphe.engine.util
 
+import app.morphe.engine.MorpheData
 import java.io.File
 
 /**
@@ -85,13 +86,15 @@ object ApkOutputNaming {
      * - Both versions encoded in the filename so the output is self-describing
      * - `patchesFile` is optional; if null, no `-patches-{ver}` suffix is added
      *
-     * @param inputApk       the APK being patched. Its parent directory is the
-     *                       default base unless [baseOutputDir] is provided.
+     * @param inputApk       the APK being patched. Only used to derive the app
+     *                       folder name and version when they aren't supplied. Its
+     *                       location never decides where the output goes.
      * @param patchesFile    primary `.mpp` file. Used only for the suffix —
      *                       in multi-source mode pass any one of the bundles.
-     * @param baseOutputDir  override for the base directory (e.g. the GUI's
-     *                       configured default output directory). Defaults to
-     *                       `inputApk.parentFile`.
+     * @param baseOutputDir  an explicitly configured output directory (e.g. the
+     *                       GUI's default output directory). When null, Morphe's own
+     *                       [MorpheData.patchedApksDir] is used, never the input
+     *                       APK's folder.
      * @param appDisplayName Pre-resolved app label (e.g. "Youtube"). If null,
      *                       falls back to the input APK's filename without
      *                       extension. GUI callers pass the value from their
@@ -107,9 +110,7 @@ object ApkOutputNaming {
     ): File {
         val appFolderName = (appDisplayName ?: inputApk.nameWithoutExtension)
             .replace(" ", "-")
-        val base = baseOutputDir
-            ?: inputApk.absoluteFile.parentFile
-            ?: File("").absoluteFile
+        val base = baseOutputDir ?: MorpheData.patchedApksDir
         val outputDir = File(base, appFolderName).also { it.mkdirs() }
         // App version, most reliable first: a version the caller already resolved, then the
         // APK manifest's versionName, then the input filename (APKMirror convention), then a

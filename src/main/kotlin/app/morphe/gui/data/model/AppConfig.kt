@@ -106,6 +106,7 @@ data class AppConfig(
      */
     val cardFills: Map<String, MorpheFill> = emptyMap(),
     val useSharpCorners: Boolean = false,
+    val groupPatchesByCategory: Boolean = true,
     val homeAppSortMode: String = "RECOMMENDED",
     val preferredPatchChannel: String = PatchChannel.STABLE.name,
     val defaultOutputDirectory: String? = null,
@@ -164,11 +165,12 @@ data class AppConfig(
     // (only applies when a rename patch was used and stock is installed). Default
     // OFF. It reaches into a stock app's behavior.
     val disableStockLinksAfterInstall: Boolean = false,
-    // Whether a successful patch retains a copy of the pre-patch (original) APK,
-    // so a later repatch can reuse it instead of requiring the user to re-supply
-    // the file — see OriginalApkRepository. Default ON, matching morphe-manager's
-    // own default: the archive only grows with actual use (one entry per
-    // package+version, deduplicated), and losing the ability to repatch without
+    // Whether a successful patch moves the pre-patch (original) APK into Morphe's
+    // managed storage, where it becomes the canonical input for later repatches
+    // instead of the file the user picked — see OriginalApkRepository. When OFF the
+    // user's file is left where it is. Default ON, matching morphe-manager's own
+    // default: the archive only grows with actual use (one entry per package,
+    // replaced on a new version), and losing the ability to repatch without
     // re-locating the original file is a worse default than the disk cost.
     val saveOriginalApks: Boolean = true,
 ) {

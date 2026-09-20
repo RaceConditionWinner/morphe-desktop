@@ -12,7 +12,10 @@ import app.morphe.engine.patches.RemotePatchSource
 import app.morphe.engine.patches.findPatchAsset
 import app.morphe.gui.util.Logger
 import java.io.File
+import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 /**
@@ -61,6 +64,14 @@ class PatchRepository(
     // In-memory cache so multiple callers don't re-fetch from the remote API
     private var cachedReleases: List<Release>? = null
     private var cacheTimestamp: Long = 0L
+
+    // One mutex per target file, so two callers racing to download the exact same
+    // release+asset serialize instead of both streaming into the same `.part` file
+    // (HttpService.downloadToFile truncates it on open — a second concurrent writer
+    // would corrupt the first's stream). Downloads of *different* files/versions of
+    // this source are unaffected — each gets its own key and runs in parallel.
+    // A plain per-instance lock would needlessly serialize those too.
+    private val downloadLocks = ConcurrentHashMap<String, Mutex>()
 
     /**
      * Fetch all releases. Returns cached result if still fresh.
@@ -143,6 +154,21 @@ class PatchRepository(
         val patchesDir = PatchCache.sourceDir(repoPath)
         val targetFile = File(patchesDir, cachedFileName(release, asset))
 
+        val lock = downloadLocks.getOrPut(targetFile.absolutePath) { Mutex() }
+        lock.withLock {
+            // Re-check the cache under the lock: if a concurrent caller just finished
+            // downloading this exact file while we were waiting for it, we're done —
+            // no redundant second download.
+            downloadPatchesLocked(release, asset, targetFile, onProgress)
+        }
+    }
+
+    private suspend fun downloadPatchesLocked(
+        release: Release,
+        asset: ReleaseAsset,
+        targetFile: File,
+        onProgress: (Float) -> Unit,
+    ): Result<File> {
         // Cache hit rules:
         //  - If we know the asset's expected size (GitHub provides it),
         //    the cached file must match exactly.
@@ -159,7 +185,7 @@ class PatchRepository(
         if (isCached) {
             Logger.info("Using cached patches: ${targetFile.absolutePath} (${targetFile.length()} bytes)")
             onProgress(1f)
-            return@withContext Result.success(targetFile)
+            return Result.success(targetFile)
         }
 
         // Delegate the actual network IO to the engine source, translating byte
@@ -172,7 +198,7 @@ class PatchRepository(
             }
         }
         if (result.isSuccess) onProgress(1f)
-        result
+        return result
     }
 
     /** Get cached patch file for a specific version. */

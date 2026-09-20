@@ -6,14 +6,11 @@
 package app.morphe.gui.ui.screens.quick
 
 import app.morphe.engine.MorpheData
-import app.morphe.engine.OriginalApkRepository
-import app.morphe.engine.PatchedAppStore
 import app.morphe.engine.UpdateChecker
 import app.morphe.engine.UpdateInfo
 import app.morphe.engine.model.PatchedAppRecord
 import app.morphe.engine.util.ApkManifestReader
 import app.morphe.engine.util.ApkOutputNaming
-import app.morphe.engine.util.FileChecksum
 import app.morphe.gui.data.constants.AppConstants
 import app.morphe.gui.data.model.Patch
 import app.morphe.gui.data.model.PatchSource
@@ -32,6 +29,7 @@ import app.morphe.gui.util.FileUtils
 import app.morphe.gui.util.Logger
 import app.morphe.gui.util.PatchResult
 import app.morphe.gui.util.PatchService
+import app.morphe.gui.util.PatchedAppRecorder
 import app.morphe.gui.util.PatcherLogInterceptor
 import app.morphe.gui.util.PatcherState
 import app.morphe.gui.util.SupportedAppExtractor
@@ -63,9 +61,8 @@ class QuickPatchViewModel(
     private val patchService: PatchService,
     private val configRepository: ConfigRepository,
     private val updateCheckRepository: UpdateCheckRepository,
-    private val patchedAppStore: PatchedAppStore = PatchedAppStore.shared,
+    private val patchedAppRecorder: PatchedAppRecorder,
     private val seenPatchesRepository: SeenPatchesRepository = SeenPatchesRepository(),
-    private val originalApkRepository: OriginalApkRepository = OriginalApkRepository(),
 ) : ScreenModel {
 
     private var patchRepository: PatchRepository = patchSourceManager.getActiveRepositorySync()
@@ -619,7 +616,7 @@ class QuickPatchViewModel(
                             statusMessage = ""
                         )
                         Logger.info("Quick mode: Patching completed - $outputPath (${result.appliedPatches.size} patches)")
-                        recordPatchedApp(result, apkFile.absolutePath, outputPath, apkInfo.displayName)
+                        recordPatchedApp(result, apkFile, File(outputPath), apkInfo)
                         recordSeenPatches(apkInfo.packageName)
                     } else {
                         val errorMsg = result.failureDetail ?: result.failureReason ?: "Patching failed for an unknown reason"
@@ -643,11 +640,6 @@ class QuickPatchViewModel(
     }
 
     /**
-     * Record this quick-mode patch in the shared patched-app history.
-     * Best-effort: a write failure must never disrupt the success UX. Quick mode
-     * uses the default patch set, so no per-bundle selection is captured.
-     */
-    /**
      * Snapshot what each source offered for this app, so expert mode can tell a
      * genuinely new patch from one the user has already seen.
      */
@@ -662,69 +654,51 @@ class QuickPatchViewModel(
         }
     }
 
+    /**
+     * Hand the original APK over to Morphe and record this quick-mode patch in the shared
+     * patched-app history — see [PatchedAppRecorder]. Quick mode uses the default patch set,
+     * so no per-bundle selection is captured. The patch itself has already succeeded, so a
+     * failure here is a warning, never a failed patch.
+     */
     private suspend fun recordPatchedApp(
         result: PatchResult,
-        inputApkPath: String,
-        outputApkPath: String,
-        displayName: String,
+        inputApk: File,
+        outputApk: File,
+        apkInfo: QuickApkInfo,
     ) {
-        try {
-            val pkg = result.packageName
-            if (pkg.isEmpty()) return
-            val (sha, size) = withContext(Dispatchers.IO) {
-                FileChecksum.fingerprintOrNull(outputApkPath)
-            }
-            val manifest = withContext(Dispatchers.IO) {
-                runCatching { ApkManifestReader.read(File(outputApkPath)) }.getOrNull()
-            }
-            // Must be the configured source name: every update lookup keys off it,
-            // and a bundle filename never matches one.
-            val resolvedSources = cachedSourcesResult?.resolved?.filter { it.patchFile != null }
-            val sources = if (!resolvedSources.isNullOrEmpty()) {
-                resolvedSources.map { r ->
-                    PatchedAppRecord.PatchedSourceSnapshot(
-                        sourceId = r.source.id,
-                        sourceName = r.source.name,
-                        version = r.resolvedVersion
-                            ?: r.patchFile?.name?.let { ApkOutputNaming.extractPatchesVersion(it) }
-                            ?: "unknown",
-                    )
-                }
-            } else {
-                currentResolvedPatchFiles().map { f ->
-                    PatchedAppRecord.PatchedSourceSnapshot(
-                        sourceId = f.nameWithoutExtension,
-                        sourceName = f.nameWithoutExtension,
-                        version = ApkOutputNaming.extractPatchesVersion(f.name) ?: "unknown",
-                    )
-                }
-            }
-            patchedAppStore.upsert(
-                PatchedAppRecord(
-                    packageName = pkg,
-                    currentPackageName = manifest?.packageName,
-                    displayName = displayName.ifEmpty { pkg },
-                    // Prefer the manifest's versionName (e.g. "21.20.400") over the numeric
-                    // versionCode so update-detection version comparisons work.
-                    apkVersion = manifest?.versionName?.takeIf { it.isNotBlank() } ?: result.packageVersion,
-                    apkVersionCode = manifest?.versionCode,
-                    inputApkPath = inputApkPath,
-                    outputApkPath = outputApkPath,
-                    outputApkSha256 = sha,
-                    outputApkSize = size,
-                    sourcesSnapshot = sources,
-                    patchedAt = System.currentTimeMillis(),
-                    patchedWithMorpheVersion = UpdateChecker.currentVersion() ?: "unknown",
+        // Must be the configured source name: every update lookup keys off it,
+        // and a bundle filename never matches one.
+        val resolvedSources = cachedSourcesResult?.resolved?.filter { it.patchFile != null }
+        val sources = if (!resolvedSources.isNullOrEmpty()) {
+            resolvedSources.map { r ->
+                PatchedAppRecord.PatchedSourceSnapshot(
+                    sourceId = r.source.id,
+                    sourceName = r.source.name,
+                    version = r.resolvedVersion
+                        ?: r.patchFile?.name?.let { ApkOutputNaming.extractPatchesVersion(it) }
+                        ?: "unknown",
                 )
-            )
-            // Best-effort, same contract as this whole function.
-            originalApkRepository.saveOriginalApk(
-                packageName = pkg,
-                version = manifest?.versionName?.takeIf { it.isNotBlank() } ?: result.packageVersion,
-                sourceFile = File(inputApkPath),
-            )
-        } catch (e: Exception) {
-            Logger.error("Failed to record patched app (quick mode)", e)
+            }
+        } else {
+            currentResolvedPatchFiles().map { f ->
+                PatchedAppRecord.PatchedSourceSnapshot(
+                    sourceId = f.nameWithoutExtension,
+                    sourceName = f.nameWithoutExtension,
+                    version = ApkOutputNaming.extractPatchesVersion(f.name) ?: "unknown",
+                )
+            }
+        }
+        patchedAppRecorder.record(
+            packageName = apkInfo.packageName,
+            displayName = apkInfo.displayName,
+            inputApk = inputApk,
+            outputApk = outputApk,
+            patchResult = result,
+            sourcesSnapshot = sources,
+        ).onFailure {
+            _uiState.update { state ->
+                state.copy(logs = state.logs + LogEntry("Patched, but couldn't save it to Your apps: ${it.message}", LogLevel.WARNING))
+            }
         }
     }
 
