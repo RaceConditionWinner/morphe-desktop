@@ -6,7 +6,6 @@
 package app.morphe.gui.ui.screens.quick
 
 import app.morphe.engine.MorpheData
-import app.morphe.engine.UpdateChecker
 import app.morphe.engine.UpdateInfo
 import app.morphe.engine.model.PatchedAppRecord
 import app.morphe.engine.util.ApkManifestReader

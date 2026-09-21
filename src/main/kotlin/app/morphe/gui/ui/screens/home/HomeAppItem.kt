@@ -10,8 +10,8 @@ import app.morphe.engine.model.PatchedAppRecord
 import app.morphe.gui.data.model.SupportedApp
 import app.morphe.gui.util.DeviceInstallState
 import app.morphe.gui.util.PatchedArtifactState
-import app.morphe.gui.util.TrackedInstall
 import app.morphe.gui.util.compareVersions
+import app.morphe.gui.util.isNewerVersion
 import java.io.File
 
 /**
@@ -154,9 +154,19 @@ data class HomeAppItem(
     /** Whether the build on the device is the one Morphe produced, which gates its actions. */
     val isInstalledOnDevice: Boolean get() = deviceState == DeviceInstallState.INSTALLED
 
-    /** Whether the patched APK can be pushed as-is, without patching again. */
+    /**
+     * Whether the patched APK can be pushed as-is, without patching again: the
+     * file is still there, and the device is either missing it or behind it.
+     * Never true without a device, because nothing is known about one that is
+     * not attached.
+     */
     val installPending: Boolean get() = record != null &&
-        TrackedInstall(deviceState, artifactState, deviceVersion).installPending(record.apkVersion)
+        artifactState != PatchedArtifactState.MISSING &&
+        when (deviceState) {
+            DeviceInstallState.NOT_INSTALLED -> true
+            DeviceInstallState.INSTALLED -> isNewerVersion(record.apkVersion, deviceVersion)
+            else -> false
+        }
 
     val appliedPatchCount: Int get() = record?.appliedPatchCount ?: 0
 

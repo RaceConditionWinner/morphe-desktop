@@ -56,20 +56,7 @@ data class TrackedInstall(
     val deviceVersion: String? = null,
     /** Where the device keeps the installed APK, when it says. */
     val deviceApkPath: String? = null,
-) {
-    /** The patched APK Morphe wrote is still there to install, export or inspect. */
-    val hasUsableArtifact: Boolean get() = artifactState != PatchedArtifactState.MISSING
-
-    /**
-     * Whether the patched build can be pushed without patching again: the file is
-     * there and the device is either missing it or behind it.
-     */
-    fun installPending(recordVersion: String): Boolean = hasUsableArtifact && when (deviceState) {
-        DeviceInstallState.NOT_INSTALLED -> true
-        DeviceInstallState.INSTALLED -> isNewerVersion(recordVersion, deviceVersion)
-        else -> false
-    }
-}
+)
 
 /**
  * The record is written the moment the install finishes, so only clock skew
@@ -109,9 +96,10 @@ internal fun resolveDeviceInstallState(
     // is not on the device, which nothing else would have done
     installerPackage != null && installerPackage in morpheInstallers -> DeviceInstallState.INSTALLED
 
-    // A package that only appeared after Morphe patched it, credited to an
-    // installer Morphe would not have used, is somebody else's installation
-    installedAfterPatching && installerPackage !in morpheInstallers -> DeviceInstallState.REPLACED
+    // Nothing above matched, so whatever installed this is not something Morphe
+    // would have credited. A package that only appeared after the patch is then
+    // somebody else's installation rather than an unreadable one of ours.
+    installedAfterPatching -> DeviceInstallState.REPLACED
 
     // A comparison was possible in principle, so say the check did not happen
     // rather than imply it passed

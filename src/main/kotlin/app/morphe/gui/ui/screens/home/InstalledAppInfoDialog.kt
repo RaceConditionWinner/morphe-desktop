@@ -94,7 +94,6 @@ import app.morphe.gui.ui.components.LocalAppCardInk
 import app.morphe.gui.ui.components.FormattedReleaseNotes
 import app.morphe.gui.ui.components.MorpheActionButton
 import app.morphe.gui.ui.components.MorpheCardChip
-import app.morphe.gui.ui.components.handCursor
 import app.morphe.gui.ui.components.morpheScrollbarStyle
 import app.morphe.gui.ui.icons.MorpheIcons
 import app.morphe.gui.ui.theme.LocalMorpheAccents
@@ -660,9 +659,10 @@ private fun AppInfoBanners(
                     changelogSource?.let { sourceId ->
                         add(
                             DialogAction(
-                                stringResource(Res.string.installed_info_whats_new),
-                                MorpheIcons.Article,
-                            ) { onShowChangelog(sourceId) }
+                                label = stringResource(Res.string.installed_info_whats_new),
+                                icon = MorpheIcons.Article,
+                                onClick = { onShowChangelog(sourceId) },
+                            )
                         )
                     }
                     onIgnoreVersion?.let {
