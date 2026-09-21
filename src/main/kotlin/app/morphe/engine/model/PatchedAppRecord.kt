@@ -15,12 +15,22 @@ import kotlinx.serialization.Serializable
  * the shared engine layer so the two pipelines feed one history), and read back
  * to surface "you've patched this before / an update is available" UX.
  *
- * Keyed by [packageName], so re-patching the same app overwrites its record.
- * For apps whose package is renamed by a patch, this is the **original**
- * (pre-patch) package name, for consistency with the rest of our schema.
+ * Identified by [id], not by [packageName]. One app can be patched into several
+ * installs of its own — a clone carries a package name it does not share with
+ * the app it was copied from — and all of them key their bundle data off the
+ * original [packageName]. Keying the history off the package would let the
+ * second build overwrite the first.
  */
 @Serializable
 data class PatchedAppRecord(
+    /**
+     * Stable identity of this record, which is the package the build installs
+     * under. Blank only in records written before the field existed;
+     * [trackingKey] is what every reader should use, and
+     * `PatchedAppStore` fills this in on migration.
+     */
+    val id: String = "",
+    /** The original (pre-patch) package name, which is what bundle data is keyed by. */
     val packageName: String,
     /**
      * Post-patch package as it installs on a device, differing from [packageName]
@@ -30,8 +40,22 @@ data class PatchedAppRecord(
      * `currentPackageName`.
      */
     val currentPackageName: String? = null,
+    /**
+     * Whether this record is a copy of the app rather than the app's own install.
+     *
+     * Recorded when the copy is made, never inferred from a package name that
+     * differs from [packageName]: patches rename an app for reasons of their own
+     * and such a build is still the app's own install.
+     */
+    val isClone: Boolean = false,
     /** Human-readable app name shown in UI. */
     val displayName: String,
+    /**
+     * The `appIconColor` the patch bundle declared for this app at patch time,
+     * retained so a card keeps its color once the source that declared it is
+     * gone. Null when the bundle declared none.
+     */
+    val appIconColorHex: String? = null,
     /** APK version at patch time. */
     val apkVersion: String,
     val apkVersionCode: Int? = null,
@@ -64,7 +88,9 @@ data class PatchedAppRecord(
 
     /**
      * Which sources + versions were enabled at patch time. "Update available"
-     * detection compares current source versions against this snapshot.
+     * detection compares current source versions against this snapshot, and the
+     * app information dialog names the source from it once the source itself is
+     * gone.
      */
     val sourcesSnapshot: List<PatchedSourceSnapshot> = emptyList(),
 
@@ -74,6 +100,22 @@ data class PatchedAppRecord(
 ) {
     /** Package actually installed on a device (post-rename if applicable). */
     val installedPackageName: String get() = currentPackageName?.takeIf { it.isNotBlank() } ?: packageName
+
+    /**
+     * What this record is filed under. Falls back to the installed package so a
+     * record written before [id] existed still resolves to the same key the
+     * migration assigns it.
+     */
+    val trackingKey: String get() = id.takeIf { it.isNotBlank() } ?: installedPackageName
+
+    /** Whether a patch renamed the package, which a clone does not on its own. */
+    val isRenamed: Boolean get() = installedPackageName != packageName
+
+    /** Total patches applied across every bundle that contributed to this build. */
+    val appliedPatchCount: Int get() = patchSelectionByBundle.values.sumOf { it.size }
+
+    /** Bundles that actually contributed a patch, which an enabled-but-unused one did not. */
+    val contributingBundleCount: Int get() = patchSelectionByBundle.count { it.value.isNotEmpty() }
 
     @Serializable
     data class PatchedSourceSnapshot(
