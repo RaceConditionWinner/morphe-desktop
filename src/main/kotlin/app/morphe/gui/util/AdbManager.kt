@@ -11,6 +11,8 @@ import app.morphe.morphe_desktop.generated.resources.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.time.LocalDateTime
+import java.time.ZoneId
 import java.net.InetSocketAddress
 import java.net.Socket
 import org.jetbrains.compose.resources.StringResource
@@ -667,17 +669,53 @@ class AdbManager {
     }
 
     /**
-     * Installed `versionName` and signing-cert id of [pkg] on [deviceId] from a
-     * single `dumpsys package` call. Returns `(versionName, signatureId)` (either
-     * may be null if absent/unparseable), or null if the package isn't dumpable.
+     * Everything one `dumpsys package` call can say about [pkg] on [deviceId], or
+     * null when the package is not there to be dumped.
+     *
+     * One call rather than one per field: the resolver asks about every tracked
+     * app on every device change, and a second process per answer is what made
+     * that stall. Each field is best-effort — a device whose dumpsys format we do
+     * not recognise yields nulls rather than a failure, and the caller then says
+     * the check did not happen instead of implying it passed.
      */
-    suspend fun getInstalledPackageInfo(deviceId: String, pkg: String): Pair<String?, String?>? =
+    suspend fun getDevicePackageInfo(deviceId: String, pkg: String): DevicePackageInfo? =
         withContext(Dispatchers.IO) {
             val out = dumpsysPackage(deviceId, pkg) ?: return@withContext null
+            // dumpsys prints the block even for an absent package, but without the
+            // version line it carries nothing worth trusting
             val version = Regex("""versionName=(\S+)""").find(out)?.groupValues?.get(1)
-            val signatureId = SignatureIdentity.parseDeviceSignatureId(out)
-            version to signatureId
+            val versionCode = Regex("""versionCode=(\d+)""").find(out)?.groupValues?.get(1)?.toLongOrNull()
+            val apkPath = Regex("""codePath=(\S+)""").find(out)?.groupValues?.get(1)
+            val installer = Regex("""installerPackageName=(\S+)""").find(out)?.groupValues?.get(1)
+                ?.takeUnless { it == "null" }
+            val firstInstall = Regex("""firstInstallTime=(\S+ \S+)""").find(out)?.groupValues?.get(1)
+            DevicePackageInfo(
+                versionName = version,
+                versionCode = versionCode,
+                apkPath = apkPath,
+                installerPackage = installer,
+                firstInstallTime = parseDumpsysTime(firstInstall),
+                signatureId = SignatureIdentity.parseDeviceSignatureId(out),
+            )
         }
+
+    /**
+     * `dumpsys` prints install times as local `yyyy-MM-dd HH:mm:ss`. Parsed in the
+     * host's own zone, which is the closest thing to the device's that is available
+     * without a second call, and only ever compared against a generous tolerance.
+     */
+    private fun parseDumpsysTime(value: String?): Long? {
+        if (value.isNullOrBlank()) return null
+        return runCatching {
+            LocalDateTime.parse(value.trim().replace(' ', 'T'))
+                .atZone(ZoneId.systemDefault())
+                .toInstant()
+                .toEpochMilli()
+        }.getOrNull()
+    }
+
+    /** Installer packages Morphe itself attributes its installs to. */
+    fun morpheInstallerCandidates(): Set<String> = SPOOF_STORE_CANDIDATES.toSet()
 
     private suspend fun dumpsysPackage(deviceId: String, pkg: String): String? = withContext(Dispatchers.IO) {
         val adb = findAdb() ?: return@withContext null
@@ -804,6 +842,24 @@ class AdbManager {
         }
     }
 }
+
+/**
+ * What the device reports about one installed package. Every field is optional:
+ * dumpsys output varies by OEM and Android version, and a field that could not
+ * be read must not be mistaken for one that is absent.
+ */
+data class DevicePackageInfo(
+    val versionName: String?,
+    val versionCode: Long?,
+    /** Where the device keeps the installed APK, when it says. */
+    val apkPath: String?,
+    /** Who the system credits with the installation. */
+    val installerPackage: String?,
+    /** Epoch millis of the first install, when it could be parsed. */
+    val firstInstallTime: Long?,
+    /** Signing-certificate identity, comparable against Morphe's own keystores. */
+    val signatureId: String?,
+)
 
 data class AdbDevice(
     val id: String,
