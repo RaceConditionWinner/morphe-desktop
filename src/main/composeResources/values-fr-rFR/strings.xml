@@ -467,7 +467,7 @@
     <string name="icon_studio_preview_adaptive">Adaptative</string>
     <string name="icon_studio_preview_monochrome">Monochrome</string>
     <string name="icon_studio_preview_shapes">Aperçu des formes</string>
-    <string name="icon_studio_preview_shapes_hint">Chaque lanceur choisit sa propre forme, cliquez pour prévisualiser comment elle sera recadrée</string>
+    <string name="icon_studio_preview_shapes_hint">Chaque lanceur choisit sa propre forme, cliquez pour voir un aperçu de la façon dont elle sera recadrée</string>
     <string name="icon_studio_preview_notification_status_bar">Notification / Barre d'état</string>
     <string name="icon_studio_layer_label">Calque</string>
     <string name="icon_studio_duplicate_button">Dupliquer</string>

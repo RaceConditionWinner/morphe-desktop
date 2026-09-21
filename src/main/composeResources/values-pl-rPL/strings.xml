@@ -552,7 +552,7 @@
     <string name="patch_source_dialog_experimental_title">Eksperymentalne wersje aplikacji</string>
     <string name="patch_source_dialog_experimental_hint">Nadaje priorytet eksperymentalnym wersjom aplikacji, jeśli są dostępne</string>
     <string name="patch_source_dialog_error_name_required">Nazwa jest wymagana</string>
-    <string name="patch_source_dialog_error_invalid_url">Wprowadź prawidłowy adres URL GitHub lub GitLab</string>
+    <string name="patch_source_dialog_error_invalid_url">Wprowadź prawidłowy adres GitHub lub GitLab</string>
     <string name="patch_source_dialog_error_invalid_file">Wybierz prawidłowy plik .mpp</string>
     <string name="patch_source_dialog_add_button">Dodaj</string>
     <string name="patch_source_dialog_edit_title">Edytuj źródło</string>
