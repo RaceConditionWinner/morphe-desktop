@@ -705,6 +705,9 @@ class QuickPatchViewModel(
             outputApk = outputApk,
             patchResult = result,
             sourcesSnapshot = sources,
+            appIconColorHex = cachedSupportedApps
+                .firstOrNull { it.packageName == apkInfo.packageName }
+                ?.appIconColor,
         ).onFailure {
             _uiState.update { state ->
                 state.copy(logs = state.logs + LogEntry("Patched, but couldn't save it to Your apps: ${it.message}", LogLevel.WARNING))

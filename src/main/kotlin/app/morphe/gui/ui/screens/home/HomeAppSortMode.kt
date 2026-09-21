@@ -6,8 +6,6 @@
 package app.morphe.gui.ui.screens.home
 
 import androidx.compose.runtime.Composable
-import app.morphe.engine.model.PatchedAppRecord
-import app.morphe.gui.data.model.SupportedApp
 import app.morphe.morphe_desktop.generated.resources.*
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
@@ -42,32 +40,17 @@ data class HomeSortKeys(
     val patchedAt: Long,
 )
 
-fun SupportedApp.sortKeys(
-    states: Map<String, PatchedAppState>,
-    installed: Set<String>,
-    patchedAt: Map<String, Long>,
-): HomeSortKeys {
-    val state = states[packageName]
-    return HomeSortKeys(
-        displayName = displayName,
-        packageName = packageName,
-        isPatched = state != null && state != PatchedAppState.NEVER_PATCHED,
-        isInstalled = packageName in installed,
-        hasPatchUpdate = state == PatchedAppState.PATCHED_WITH_UPDATES,
-        patchedAt = patchedAt[packageName] ?: Long.MIN_VALUE,
-    )
-}
-
-fun PatchedAppRecord.sortKeys(
-    states: Map<String, PatchedAppState>,
-    installed: Set<String>,
-): HomeSortKeys = HomeSortKeys(
+/**
+ * The keys every sort mode orders by, read off the one semantic state behind the
+ * card rather than off three maps the caller has to keep in step.
+ */
+fun HomeAppItem.sortKeys(): HomeSortKeys = HomeSortKeys(
     displayName = displayName,
     packageName = packageName,
-    isPatched = true,
-    isInstalled = packageName in installed,
-    hasPatchUpdate = states[packageName] == PatchedAppState.PATCHED_WITH_UPDATES,
-    patchedAt = patchedAt,
+    isPatched = isTracked,
+    isInstalled = isOnDevice,
+    hasPatchUpdate = showsRebuildBadge,
+    patchedAt = record?.patchedAt ?: Long.MIN_VALUE,
 )
 
 private val recommended: Comparator<HomeSortKeys> =

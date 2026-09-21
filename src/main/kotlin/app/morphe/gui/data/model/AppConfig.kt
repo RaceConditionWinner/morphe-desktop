@@ -158,6 +158,15 @@ data class AppConfig(
     // Which home apps tab the user last viewed ("ALL" or "YOURS"), restored on
     // next launch. Stored as a string so this data layer stays free of UI enums.
     val homeAppListFilter: String = "ALL",
+    // Home cards the user has hidden, by HomeAppItem id (the package a build
+    // installs under, so a clone can be hidden without hiding the app it came
+    // from). Hidden cards stay in the history and are reachable through the
+    // hidden-apps toggle. Stored as a list so the config stays plain JSON.
+    val hiddenHomeApps: List<String> = emptyList(),
+    // Supported app versions the user turned down, keyed by original package.
+    // The rebuild offer stays away for that version only, so a later one brings
+    // it back on its own. See HomeViewModel.ignoreSupportedVersion.
+    val ignoredSupportedVersions: Map<String, String> = emptyMap(),
     // After an ADB install, automatically route the patched app's web links to it
     // ("open with"). Default OFF. It changes how the device opens links, so it's
     // opt-in. See AppLinkCommands / AdbManager.setLinkHandling.

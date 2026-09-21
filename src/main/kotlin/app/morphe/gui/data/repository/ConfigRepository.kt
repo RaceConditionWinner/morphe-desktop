@@ -539,6 +539,33 @@ class ConfigRepository {
     }
 
     /**
+     * Hide or unhide one home card, by its [HomeAppItem][app.morphe.gui.ui.screens.home.HomeAppItem]
+     * id. Hiding never touches the patched-app history: the card comes back
+     * exactly as it was.
+     */
+    suspend fun setHomeAppHidden(id: String, hidden: Boolean) {
+        val current = loadConfig()
+        val updated = if (hidden) current.hiddenHomeApps + id else current.hiddenHomeApps - id
+        if (updated.toSet() == current.hiddenHomeApps.toSet()) return
+        saveConfig(current.copy(hiddenHomeApps = updated.distinct()))
+    }
+
+    /**
+     * Answer the offer to rebuild [packageName] at [version], leaving later
+     * versions to be offered. A null [version] takes the refusal back.
+     */
+    suspend fun setIgnoredSupportedVersion(packageName: String, version: String?) {
+        val current = loadConfig()
+        val updated = if (version == null) {
+            current.ignoredSupportedVersions - packageName
+        } else {
+            current.ignoredSupportedVersions + (packageName to version)
+        }
+        if (updated == current.ignoredSupportedVersions) return
+        saveConfig(current.copy(ignoredSupportedVersions = updated))
+    }
+
+    /**
      * Toggle enablement of a patch source. Safety net: if disabling would leave zero
      * enabled sources, the default source is force-enabled (mirrors morphe-manager
      * SourceManagementSheet.kt:142-149 LaunchedEffect).

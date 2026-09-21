@@ -29,7 +29,7 @@ import app.morphe.gui.ui.screens.home.components.MiddleContent
 import app.morphe.gui.ui.screens.home.components.MultiSourceHintBanner
 import app.morphe.gui.ui.screens.home.components.RepatchMissingApkDialog
 import app.morphe.gui.ui.screens.home.components.SourcesFailedBanner
-import app.morphe.gui.ui.screens.home.components.SupportedAppsListPane
+import app.morphe.gui.ui.screens.home.components.HomeAppsPane
 import app.morphe.gui.ui.screens.home.components.UninstallConfirmDialog
 import app.morphe.gui.ui.screens.home.components.VersionWarningDialog
 import app.morphe.gui.ui.screens.patches.PatchSelectionScreen
@@ -71,8 +71,9 @@ fun HomeScreenContent(
     val navigator = LocalNavigator.currentOrThrow
     val uiState by viewModel.uiState.collectAsState()
 
-    // Device install-state is polled (adb), not streamed.
-    LaunchedEffect(Unit) { viewModel.refreshDeviceInfo() }
+    // The device is polled, not streamed, and the screen is where the app lands
+    // after patching or installing elsewhere, so the verdicts are taken again here.
+    LaunchedEffect(Unit) { viewModel.refreshHomeApps() }
 
     val coroutineScope = rememberCoroutineScope()
     val patchSourceManager: PatchSourceManager = koinInject()
@@ -116,8 +117,8 @@ fun HomeScreenContent(
             viewModel.getAllResolvedPatchSourceNames(),
         )
     }
-    val onRepatch: (String) -> Unit = onRepatch@{ pkg ->
-        val record = viewModel.getPatchedRecord(pkg) ?: return@onRepatch
+    val onRepatch: (String) -> Unit = onRepatch@{ trackingKey ->
+        val record = viewModel.getPatchedRecord(trackingKey) ?: return@onRepatch
         // HomeViewModel hands out records whose input path is already resolved to the
         // Morphe-managed original when one exists, so this never prefers a stale copy in
         // the user's own folders. Only when nothing usable is left do we ask for the APK.
@@ -130,13 +131,13 @@ fun HomeScreenContent(
 
     // Explicit "Forget" recovery action. Removes a record from the history.
     var forgetConfirm by remember { mutableStateOf<PatchedAppRecord?>(null) }
-    val onForget: (String) -> Unit = { pkg -> forgetConfirm = viewModel.getPatchedRecord(pkg) }
+    val onForget: (String) -> Unit = { key -> forgetConfirm = viewModel.getPatchedRecord(key) }
     forgetConfirm?.let { record ->
         ForgetConfirmDialog(
             record = record,
             onDismiss = { forgetConfirm = null },
             onConfirm = {
-                viewModel.forgetPatchedApp(record.packageName)
+                viewModel.forgetPatchedApp(record.trackingKey)
                 forgetConfirm = null
             },
         )
@@ -146,9 +147,9 @@ fun HomeScreenContent(
     // offers the keep-history vs delete-history choice via a checkbox.
     var uninstallConfirm by remember { mutableStateOf<PatchedAppRecord?>(null) }
     var uninstallAlsoForget by remember { mutableStateOf(false) }
-    val onUninstall: (String) -> Unit = { pkg ->
+    val onUninstall: (String) -> Unit = { key ->
         uninstallAlsoForget = false
-        uninstallConfirm = viewModel.getPatchedRecord(pkg)
+        uninstallConfirm = viewModel.getPatchedRecord(key)
     }
     uninstallConfirm?.let { record ->
         UninstallConfirmDialog(
@@ -157,7 +158,7 @@ fun HomeScreenContent(
             onAlsoForgetChange = { uninstallAlsoForget = it },
             onDismiss = { uninstallConfirm = null },
             onConfirm = {
-                viewModel.uninstallPatchedApp(record.packageName, alsoForget = uninstallAlsoForget)
+                viewModel.uninstallPatchedApp(record.trackingKey, alsoForget = uninstallAlsoForget)
                 uninstallConfirm = null
             },
         )
@@ -171,28 +172,46 @@ fun HomeScreenContent(
         )
     }
 
-    // Tap a "Your apps" row to see the Manager-style installed-app info dialog.
-    var detailRecord by remember { mutableStateOf<PatchedAppRecord?>(null) }
-    val onShowDetail: (PatchedAppRecord) -> Unit = { detailRecord = it }
-    detailRecord?.let { record ->
-        val updateInfo = remember(record) { viewModel.recallUpdateInfo(record) }
-        var mutedSourceIds by remember(record.packageName) { mutableStateOf<Set<String>>(emptySet()) }
-        LaunchedEffect(record.packageName) {
+    // Tapping a patched card opens the app information dialog. The dialog is
+    // addressed by id and its item is re-read from the live list on every
+    // recomposition, so a device connecting, a patch finishing or an external
+    // uninstall updates what is open rather than leaving a stale snapshot up.
+    var detailId by remember { mutableStateOf<String?>(null) }
+    val detailItem = detailId?.let { id -> uiState.homeApps.firstOrNull { it.id == id } }
+
+    // The dialog closes on its own if its record leaves the history — "Forget"
+    // from inside the dialog would otherwise leave it open over nothing.
+    LaunchedEffect(detailId, detailItem) {
+        if (detailId != null && detailItem == null) detailId = null
+    }
+
+    detailItem?.let { item ->
+        val record = item.record ?: return@let
+        // Pure map work over data already in memory, keyed so it is redone only
+        // when the record or the loaded sources actually change.
+        val appliedBundles = remember(record, uiState.supportedApps) {
+            viewModel.appliedBundles(record)
+        }
+        var mutedSourceIds by remember(item.id) { mutableStateOf<Set<String>>(emptySet()) }
+        LaunchedEffect(item.id) {
             mutedSourceIds = patchSourceManager.mutedSourceIdsForApp(record.packageName)
         }
+
         InstalledAppInfoDialog(
-            record = record,
-            state = uiState.patchedStates[record.packageName] ?: PatchedAppState.PATCHED,
-            deviceInfo = uiState.deviceAppInfo[record.packageName],
-            updateInfo = updateInfo,
-            onDismiss = { detailRecord = null },
-            onRepatch = { onRepatch(record.packageName) },
+            item = item,
+            appliedBundles = appliedBundles,
+            installing = uiState.installingApp == item.id,
+            uninstalling = uiState.uninstallingApp == item.id,
+            mutedSourceIds = mutedSourceIds,
+            onDismiss = { detailId = null },
+            onPatch = { detailId = null; onRepatch(item.id) },
             onUpdate = {
                 coroutineScope.launch {
                     // The record is handed out with its input path already resolved to the
                     // Morphe-managed original when there is one; only ask for the APK again
                     // when nothing usable is left.
                     if (!File(record.inputApkPath).exists()) {
+                        detailId = null
                         repatchMissingRecord = record
                         return@launch
                     }
@@ -200,6 +219,7 @@ fun HomeScreenContent(
                     // the version pins saved in settings.
                     viewModel.resolvePatchFiles()
                         .onSuccess { (files, names) ->
+                            detailId = null
                             launchPatch(record, record.inputApkPath, files, names)
                         }
                         .onFailure {
@@ -209,16 +229,23 @@ fun HomeScreenContent(
                         }
                 }
             },
-            onForget = { onForget(record.packageName) },
+            onInstall = { viewModel.installPatchedApp(item.id) },
+            onUninstall = { detailId = null; onUninstall(item.id) },
+            onForget = { detailId = null; onForget(item.id) },
             onOpenFolder = {
                 FileUtils.revealInFileManager(File(record.outputApkPath).parentFile)
             },
-            onInstall = { viewModel.installPatchedApp(record.packageName) },
-            onUninstall = { onUninstall(record.packageName) },
-            installing = uiState.installingPackage == record.packageName,
-            uninstalling = uiState.uninstallingPackage == record.packageName,
-            appIconColorHex = uiState.supportedApps.firstOrNull { it.packageName == record.packageName }?.appIconColor,
-            mutedSourceIds = mutedSourceIds,
+            onResetSelections = {
+                coroutineScope.launch {
+                    // Clears saved patch choices for this app across every source — the
+                    // next patch of it starts from each bundle's own .mpp defaults rather
+                    // than whatever was picked last time. Does not touch the patched
+                    // history record itself (that's "Forget", a separate action) or any
+                    // file on disk — just the remembered selection.
+                    patchPreferencesRepository.resetForApp(record.packageName)
+                }
+            },
+            onToggleHidden = { viewModel.setAppHidden(item.id, !item.isHidden) },
             onToggleSourceMute = { sourceId ->
                 coroutineScope.launch {
                     // record.patchSelectionByBundle's keys are exactly the sources that
@@ -237,16 +264,18 @@ fun HomeScreenContent(
                     mutedSourceIds = patchSourceManager.mutedSourceIdsForApp(record.packageName)
                 }
             },
-            onResetSelections = {
-                coroutineScope.launch {
-                    // Clears saved patch choices for this app across every source — the
-                    // next patch of it starts from each bundle's own .mpp defaults rather
-                    // than whatever was picked last time. Does not touch the patched
-                    // history record itself (that's "Forget", a separate action) or any
-                    // file on disk — just the remembered selection.
-                    patchPreferencesRepository.resetForApp(record.packageName)
+            // Offered only while there is a newer supported version to turn down,
+            // and taken back only while the one turned down is still on offer
+            onIgnoreVersion = item.versionStatus
+                ?.takeIf { item.showsVersionBadge }
+                ?.let { status ->
+                    { viewModel.ignoreSupportedVersion(item.packageName, status.supportedVersion) }
+                },
+            onStopIgnoringVersion = item.supportedVersion
+                ?.takeIf { supported ->
+                    uiState.ignoredVersions[item.packageName] == supported
                 }
-            },
+                ?.let { { viewModel.stopIgnoringSupportedVersion(item.packageName) } },
         )
     }
 
@@ -467,23 +496,24 @@ fun HomeScreenContent(
                                 horizontalArrangement = Arrangement.spacedBy(padding),
                                 verticalAlignment = Alignment.Top,
                             ) {
-                                // Left: browse/discover supported apps (wizard step 1).
-                                SupportedAppsListPane(
-                                    supportedApps = uiState.supportedApps,
-                                    patchedStates = uiState.patchedStates,
-                                    patchedRecords = uiState.patchedRecords,
-                                    deviceAppInfo = uiState.deviceAppInfo,
-                                    updateInfoByPackage = uiState.updateInfoByPackage,
-                                    sortMode = uiState.sortMode,
-                                    onSortModeChange = { viewModel.setSortMode(it) },
-                                    onShowDetail = onShowDetail,
+                                // Left: browse/discover apps (wizard step 1). One card
+                                // per app, patched or not, over the same semantic state
+                                // the information dialog reads.
+                                HomeAppsPane(
+                                    apps = uiState.homeApps,
                                     filter = uiState.appListFilter,
                                     onFilterChange = { viewModel.setAppListFilter(it) },
+                                    sortMode = uiState.sortMode,
+                                    onSortModeChange = { viewModel.setSortMode(it) },
+                                    showHidden = uiState.showHiddenApps,
+                                    onShowHiddenChange = { viewModel.setShowHiddenApps(it) },
                                     sourceNamesByPackage = sourceNamesByPackage,
                                     isLoading = uiState.isLoadingPatches,
                                     loadError = uiState.patchLoadError,
                                     onRetry = onRetry,
                                     onManageSources = { showSourceManagementSheet = true },
+                                    onOpenInfo = { detailId = it.id },
+                                    onToggleHidden = { viewModel.setAppHidden(it.id, !it.isHidden) },
                                     modifier = Modifier
                                         .weight(1.2f)
                                         .heightIn(max = bodyViewport),

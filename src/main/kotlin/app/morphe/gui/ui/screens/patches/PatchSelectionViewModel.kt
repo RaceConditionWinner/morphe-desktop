@@ -671,9 +671,22 @@ class PatchSelectionViewModel(
             sourcesSnapshot = activeSources,
             appVersion = apkVersion.takeIf { it.isNotBlank() },
             patchesSourceName = displaySources.joinToString(", ") { it.sourceName },
-            patchesVersion = displaySources.joinToString(", ") { it.version }
+            patchesVersion = displaySources.joinToString(", ") { it.version },
+            appIconColorHex = declaredAppIconColor(),
         )
     }
+
+    /**
+     * The color the loaded bundles declare for the app being patched, carried on
+     * so the record keeps it. Read off the patches already in memory rather than
+     * from the supported-apps list, which this screen does not hold.
+     */
+    private fun declaredAppIconColor(): String? = _uiState.value.bundles
+        .asSequence()
+        .flatMap { it.patches.asSequence() }
+        .flatMap { it.compatiblePackages.asSequence() }
+        .firstOrNull { it.name == packageName && !it.appIconColor.isNullOrBlank() }
+        ?.appIconColor
 
     /**
      * Flatten per-bundle selection into the patcher's flat (enabled, disabled)

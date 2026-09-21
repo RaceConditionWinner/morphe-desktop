@@ -54,6 +54,8 @@ class PatchedAppRecorder(
         sourcesSnapshot: List<PatchedAppRecord.PatchedSourceSnapshot>,
         patchSelectionByBundle: Map<String, Set<String>> = emptyMap(),
         patchOptionValues: Map<String, String> = emptyMap(),
+        appIconColorHex: String? = null,
+        isClone: Boolean = false,
     ): Result<Unit> = withContext(NonCancellable + Dispatchers.IO) {
         runCatching {
             val pkg = packageName.ifEmpty { patchResult.packageName }
@@ -79,11 +81,18 @@ class PatchedAppRecorder(
                 null
             }
 
+            // The package the build installs under is its identity, so a clone or a
+            // renamed build gets a record of its own instead of overwriting the app's
+            val installedPackageName = outputManifest?.packageName?.takeIf { it.isNotBlank() } ?: pkg
+
             patchedAppStore.upsert(
                 PatchedAppRecord(
+                    id = installedPackageName,
                     packageName = pkg,
                     currentPackageName = outputManifest?.packageName,
+                    isClone = isClone,
                     displayName = displayName.ifEmpty { pkg },
+                    appIconColorHex = appIconColorHex?.takeIf { it.isNotBlank() },
                     apkVersion = version,
                     apkVersionCode = originalManifest?.versionCode ?: outputManifest?.versionCode,
                     inputApkPath = (archived ?: inputApk).absolutePath,

@@ -61,6 +61,16 @@ data class VersionResolution(
 fun String.normalizeVersion(): String = removePrefix("v").removePrefix("V").trim()
 
 /**
+ * [this] printed the way every version is printed in the UI: with one leading
+ * `v`, whether or not it arrived with one. A blank string stays blank, so a
+ * missing version reads as absent rather than as "v".
+ */
+fun String.withVersionPrefix(): String {
+    val normalized = normalizeVersion()
+    return if (normalized.isEmpty()) "" else "v$normalized"
+}
+
+/**
  * Compare two version strings. Returns -1 if v1 < v2, 0 if equal, 1 if v1 > v2.
  * Handles dotted app versions ("20.40.45") and semver-ish tags ("v1.39.0-dev.10").
  * Stable outranks a pre-release of the same base. Pre-release ordinals compare

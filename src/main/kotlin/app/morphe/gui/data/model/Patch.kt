@@ -115,4 +115,10 @@ data class PatchConfig(
     val appVersion: String? = null,
     val patchesSourceName: String? = null,
     val patchesVersion: String? = null,
+    /**
+     * The `appIconColor` the patching bundle declares for [packageName], retained
+     * on the record so its card and information dialog keep the app's own accent
+     * once the source that declared it is gone.
+     */
+    val appIconColorHex: String? = null,
 )

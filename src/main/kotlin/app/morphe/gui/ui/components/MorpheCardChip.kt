@@ -96,7 +96,11 @@ fun MorpheCardChip(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Text(text, fontSize = 11.sp, fontFamily = font, fontWeight = FontWeight.Normal, color = ink)
+        // Blank text is a chip that stands for something a word would only crowd,
+        // e.g. the copy marker a card leads its badge row with
+        if (text.isNotEmpty()) {
+            Text(text, fontSize = 11.sp, fontFamily = font, fontWeight = FontWeight.Normal, color = ink)
+        }
         if (icon != null) {
             Icon(
                 icon,

@@ -889,4 +889,49 @@
     <!-- Source management -->
     <string name="source_sheet_summary_quick_mode">%1$s · pick which one Quick Patch uses</string>
     <string name="source_sheet_summary_multi_mode">%1$s · patches from every enabled source are unioned</string>
+    <!-- Home app cards: one state badge per card, resolved by HomeAppItem.status -->
+    <string name="home_badge_clone">Copy</string>
+    <string name="home_badge_pending">Checking</string>
+    <string name="home_badge_unverified">Unverified</string>
+    <string name="home_badge_replaced">Unpatched</string>
+    <string name="home_badge_uninstalled">Uninstalled</string>
+    <string name="home_badge_update">Update</string>
+    <string name="home_card_not_patched_yet">Not patched yet</string>
+    <string name="home_card_on_device">on device</string>
+    <string name="home_card_hide">Hide from list</string>
+    <string name="home_card_unhide">Show in list</string>
+    <string name="home_card_open_info">App information</string>
+    <string name="home_hidden_show">Show hidden (%1$d)</string>
+    <string name="home_hidden_hide">Hide hidden</string>
+    <string name="home_card_semantics_version">version %1$s</string>
+    <string name="home_card_semantics_supported_version">newest supported version %1$s</string>
+    <string name="home_card_semantics_update_available">update available</string>
+    <!-- Installed app information dialog -->
+    <string name="installed_info_newest_supported_version">Newest supported version</string>
+    <string name="installed_info_original_package">Original package</string>
+    <string name="installed_info_patched_version">Patched version</string>
+    <string name="installed_info_device_version">Version on device</string>
+    <string name="installed_info_badge_copy">Copy</string>
+    <string name="installed_info_not_patched_title">Unpatched version installed</string>
+    <string name="installed_info_not_patched_description">Something other than Morphe\'s build holds this package name. Patch again to put it back.</string>
+    <string name="installed_info_unverified_notice">Morphe could not confirm that the app on the device is the build it produced.</string>
+    <string name="installed_info_uninstalled_title">Not on the device</string>
+    <string name="installed_info_uninstalled_description">The patched APK is still here, so it can be installed again without patching.</string>
+    <string name="installed_info_patch_update_title">Patch update available</string>
+    <string name="installed_info_patch_update_description">A source that patched this app has published changes to it. Patch again to take them.</string>
+    <string name="installed_info_app_update_title">Newer app version supported</string>
+    <string name="installed_info_app_update_description">The sources now support a newer version of this app than the one that was patched.</string>
+    <string name="installed_info_version_move">%1$s to %2$s</string>
+    <string name="installed_info_whats_new">What\'s new</string>
+    <string name="installed_info_ignore_version">Ignore</string>
+    <string name="installed_info_stop_ignoring_version">Stop ignoring</string>
+    <string name="installed_info_action_patch">Patch</string>
+    <string name="installed_info_action_reinstall">Reinstall</string>
+    <string name="installed_info_changelog_title">%1$s changelog</string>
+    <string name="installed_info_source_removed">Removed source</string>
+    <string name="installed_info_source_unavailable_note">This source is no longer available. Patch names are shown as they were recorded.</string>
+    <string name="installed_info_no_saved_apk">Morphe has no original APK for this app, so patching it again asks for one.</string>
+    <string name="installed_info_section_patch_options">Patch options</string>
+    <string name="installed_info_no_device">No device connected</string>
+    <string name="installed_info_device_apk_path">Installed APK path</string>
 </resources>
