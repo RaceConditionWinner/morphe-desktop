@@ -74,18 +74,6 @@ class PatchedAppStore(
     }
 
     /**
-     * Every record built from [packageName] — the app's own install first, then
-     * any copies — ordered so repeated reads agree.
-     */
-    suspend fun getByPackage(packageName: String): List<PatchedAppRecord> = withContext(Dispatchers.IO) {
-        mutex.withLock {
-            load()
-                .filter { it.packageName == packageName }
-                .sortedWith(compareBy({ it.isClone }, { it.trackingKey }))
-        }
-    }
-
-    /**
      * Insert [record], replacing any existing record with the same tracking key.
      * @throws IOException if the history could not be persisted.
      */

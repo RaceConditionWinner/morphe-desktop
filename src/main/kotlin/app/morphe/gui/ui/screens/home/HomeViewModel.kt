@@ -1448,9 +1448,6 @@ data class RecallUpdateInfo(
      */
     val hasRelevantSourceUpdate: Boolean get() = sources.any { it.hasRelevantChanges }
 
-    /** Sources with a newer release available, whether or not it touched this app. */
-    val outdatedSources: List<SourceUpdate> get() = sources.filter { it.outdated }
-
     data class SourceUpdate(
         /** Stable source id, which outlives a rename of the source's display name. */
         val sourceId: String,
@@ -1531,11 +1528,6 @@ data class HomeUiState(
                 updateInfo.latestVersion != dismissedUpdateVersion &&
                 !updateBannerSessionDismissed
 
-    /** Cards Morphe has a build for, which is what the "Your apps" tab lists. */
-    val patchedApps: List<HomeAppItem> get() = homeApps.filter { it.isTracked }
-
-    /** Cards currently kept out of the list, whatever tab is showing. */
-    val hiddenAppCount: Int get() = homeApps.count { it.isHidden }
 }
 
 data class ApkInfo(

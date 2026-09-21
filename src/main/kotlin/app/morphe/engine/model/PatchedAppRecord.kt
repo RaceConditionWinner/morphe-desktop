@@ -114,9 +114,6 @@ data class PatchedAppRecord(
     /** Total patches applied across every bundle that contributed to this build. */
     val appliedPatchCount: Int get() = patchSelectionByBundle.values.sumOf { it.size }
 
-    /** Bundles that actually contributed a patch, which an enabled-but-unused one did not. */
-    val contributingBundleCount: Int get() = patchSelectionByBundle.count { it.value.isNotEmpty() }
-
     @Serializable
     data class PatchedSourceSnapshot(
         val sourceId: String,
