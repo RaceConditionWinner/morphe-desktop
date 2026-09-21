@@ -61,6 +61,9 @@ import app.morphe.gui.ui.theme.LocalMorpheFont
 import app.morphe.gui.ui.theme.channelColor
 import app.morphe.gui.util.EnabledSourcesLoader
 import java.io.File
+import app.morphe.morphe_desktop.generated.resources.*
+import org.jetbrains.compose.resources.stringResource
+import org.jetbrains.compose.resources.pluralStringResource
 
 /**
  * One patch source's card in the Level-1 overview grid. Answers "what source is this,
@@ -119,6 +122,10 @@ internal fun SourceCard(
         MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp).copy(alpha = 0.5f)
     }
 
+    val a11ySummary = state.error?.let {
+        stringResource(Res.string.source_card_a11y_summary_failed, source.name, sourceTypeLabel(source.type), it)
+    } ?: stringResource(Res.string.source_card_a11y_summary, source.name, sourceTypeLabel(source.type))
+
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(corners.medium))
@@ -128,8 +135,7 @@ internal fun SourceCard(
             .hoverable(hoverInteraction)
             .then(if (canInteract) Modifier.handCursor().clickable(onClick = onPrimaryClick) else Modifier)
             .semantics {
-                contentDescription = "${source.name}, ${sourceTypeLabel(source.type)}" +
-                    (state.error?.let { ", failed: $it" } ?: "")
+                contentDescription = a11ySummary
             }
             .padding(14.dp),
     ) {
@@ -179,10 +185,9 @@ internal fun SourceCard(
             ) {
                 Text(
                     text = when {
-                        patchCount == null && state.error != null -> ""
-                        patchCount == null -> "…"
-                        patchCount == 1 -> "1 patch"
-                        else -> "$patchCount patches"
+                        patchCount != null -> pluralStringResource(Res.plurals.patch_selection_group_patch_count, patchCount, patchCount)
+                        state.error != null -> ""
+                        else -> "…"
                     },
                     fontSize = 11.sp,
                     fontFamily = font,
@@ -213,13 +218,13 @@ internal fun SourceCard(
 private fun DetailsButton(onClick: () -> Unit, enabled: Boolean) {
     TooltipBox(
         positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
-        tooltip = { PlainTooltip { Text("View details", fontSize = 11.sp) } },
+        tooltip = { PlainTooltip { Text(stringResource(Res.string.source_card_view_details), fontSize = 11.sp) } },
         state = rememberTooltipState(),
     ) {
         IconButton(onClick = onClick, enabled = enabled, modifier = Modifier.size(24.dp)) {
             Icon(
                 imageVector = MorpheIcons.KeyboardArrowRight,
-                contentDescription = "View details for this source",
+                contentDescription = stringResource(Res.string.source_card_view_details_description),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = if (enabled) 0.6f else 0.3f),
                 modifier = Modifier.size(16.dp),
             )
@@ -244,7 +249,7 @@ private fun StatusRow(
                     modifier = Modifier.size(13.dp),
                 )
                 Text(
-                    text = "Failed to load",
+                    text = stringResource(Res.string.source_error_failed_to_load),
                     fontSize = 11.sp,
                     fontFamily = font,
                     fontWeight = FontWeight.Medium,
@@ -255,7 +260,7 @@ private fun StatusRow(
             }
             state.source.enabled && state.isLoading -> {
                 CircularProgressIndicator(modifier = Modifier.size(12.dp), strokeWidth = 2.dp, color = accentColor)
-                Text("Resolving…", fontSize = 11.sp, fontFamily = font, fontWeight = FontWeight.Medium, color = accentColor)
+                Text(stringResource(Res.string.source_sheet_status_resolving), fontSize = 11.sp, fontFamily = font, fontWeight = FontWeight.Medium, color = accentColor)
             }
             state.source.enabled && state.version != null -> {
                 Text(state.version, fontSize = 11.sp, fontFamily = font, fontWeight = FontWeight.Medium, color = accentColor)
@@ -263,7 +268,7 @@ private fun StatusRow(
                 if (updateAvailableVersion != null) {
                     Icon(
                         imageVector = MorpheIcons.Update,
-                        contentDescription = "Update available: $updateAvailableVersion",
+                        contentDescription = stringResource(Res.string.source_card_update_available_description, updateAvailableVersion),
                         tint = accentColor,
                         modifier = Modifier.size(12.dp),
                     )
@@ -271,7 +276,7 @@ private fun StatusRow(
             }
             else -> {
                 Text(
-                    text = "Disabled",
+                    text = stringResource(Res.string.source_card_status_disabled),
                     fontSize = 11.sp,
                     fontFamily = font,
                     fontWeight = FontWeight.Normal,
@@ -314,7 +319,7 @@ private fun SelectedRadio(selected: Boolean, enabled: Boolean, onClick: () -> Un
         if (selected) {
             Icon(
                 imageVector = MorpheIcons.Check,
-                contentDescription = "Selected for Quick Patch",
+                contentDescription = stringResource(Res.string.source_card_selected_quick_patch),
                 tint = contentColor,
                 modifier = Modifier.size(13.dp),
             )
@@ -331,12 +336,12 @@ internal fun ChannelBadge(channel: EnabledSourcesLoader.Channel?, font: FontFami
     // channel is surfaced, so getting this wrong actively hides a real problem.
     val isUnknown = channel == null || channel == EnabledSourcesLoader.Channel.UNKNOWN
     val label = when (channel) {
-        EnabledSourcesLoader.Channel.STABLE_LATEST -> "Latest Stable"
-        EnabledSourcesLoader.Channel.STABLE_OLDER -> "Older Stable"
-        EnabledSourcesLoader.Channel.DEV_LATEST -> "Latest Dev"
-        EnabledSourcesLoader.Channel.DEV_OLDER -> "Older Dev"
-        EnabledSourcesLoader.Channel.LOCAL -> "Local"
-        EnabledSourcesLoader.Channel.UNKNOWN, null -> "Unknown"
+        EnabledSourcesLoader.Channel.STABLE_LATEST -> stringResource(Res.string.version_label_latest_stable)
+        EnabledSourcesLoader.Channel.STABLE_OLDER -> stringResource(Res.string.source_sheet_channel_older_stable)
+        EnabledSourcesLoader.Channel.DEV_LATEST -> stringResource(Res.string.version_label_latest_dev)
+        EnabledSourcesLoader.Channel.DEV_OLDER -> stringResource(Res.string.source_sheet_channel_older_dev)
+        EnabledSourcesLoader.Channel.LOCAL -> stringResource(Res.string.source_sheet_local_label)
+        EnabledSourcesLoader.Channel.UNKNOWN, null -> stringResource(Res.string.unknown)
     }
     // channelColor() maps null/UNKNOWN to the same tint as STABLE_LATEST (see
     // ChannelColors.kt) — appropriate for the sources-pill LED this card doesn't use,
@@ -354,15 +359,17 @@ internal fun ChannelBadge(channel: EnabledSourcesLoader.Channel?, font: FontFami
     }
 }
 
+@Composable
 internal fun sourceTypeLabel(type: PatchSourceType): String = when (type) {
-    PatchSourceType.DEFAULT -> "Pre-installed"
-    PatchSourceType.GITHUB, PatchSourceType.GITLAB -> "Remote"
-    PatchSourceType.LOCAL -> "Local"
+    PatchSourceType.DEFAULT -> stringResource(Res.string.source_sheet_type_preinstalled)
+    PatchSourceType.GITHUB, PatchSourceType.GITLAB -> stringResource(Res.string.source_sheet_remote_label)
+    PatchSourceType.LOCAL -> stringResource(Res.string.source_sheet_local_label)
 }
 
+@Composable
 internal fun sourceSubtitle(source: PatchSource): String = when (source.type) {
-    PatchSourceType.DEFAULT -> source.url?.removePrefix("https://github.com/") ?: "Built-in"
-    PatchSourceType.GITHUB -> source.url?.removePrefix("https://github.com/") ?: "GitHub"
-    PatchSourceType.GITLAB -> source.url?.removePrefix("https://gitlab.com/") ?: "GitLab"
-    PatchSourceType.LOCAL -> source.filePath?.let { File(it).name } ?: "Local file"
+    PatchSourceType.DEFAULT -> source.url?.removePrefix("https://github.com/") ?: stringResource(Res.string.source_sheet_builtin)
+    PatchSourceType.GITHUB -> source.url?.removePrefix("https://github.com/") ?: stringResource(Res.string.github_label)
+    PatchSourceType.GITLAB -> source.url?.removePrefix("https://gitlab.com/") ?: stringResource(Res.string.source_sheet_gitlab_label)
+    PatchSourceType.LOCAL -> source.filePath?.let { File(it).name } ?: stringResource(Res.string.patch_source_dialog_local_file_label)
 }

@@ -35,6 +35,8 @@ import app.morphe.gui.ui.theme.LocalMorpheCorners
 import app.morphe.gui.util.darken
 import app.morphe.gui.util.toArgbInt
 import app.morphe.gui.util.toHexString
+import app.morphe.morphe_desktop.generated.resources.*
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Swatch side. Smaller than the manager's touch target, a pointer needing far less room to hit
@@ -56,6 +58,9 @@ private fun ColorSwatch(
 ) {
     val shape = RoundedCornerShape(LocalMorpheCorners.current.small)
     val hex = color.toHexString()
+    val selectionDescription = stringResource(
+        if (selected) Res.string.a11y_state_selected else Res.string.a11y_state_not_selected
+    )
 
     val borderWidth by animateDpAsState(if (selected) 3.dp else 1.dp, label = "swatch_border_width")
     val borderColor by animateColorAsState(
@@ -74,7 +79,7 @@ private fun ColorSwatch(
             .semantics(mergeDescendants = true) {
                 role = Role.RadioButton
                 contentDescription = hex
-                stateDescription = if (selected) "Selected" else "Not selected"
+                stateDescription = selectionDescription
             },
     )
 }

@@ -62,6 +62,9 @@ import app.morphe.gui.ui.theme.LocalMorpheCorners
 import app.morphe.gui.ui.theme.LocalMorpheFont
 import app.morphe.gui.util.ChangelogEntry
 import org.koin.compose.koinInject
+import app.morphe.morphe_desktop.generated.resources.*
+import org.jetbrains.compose.resources.stringResource
+import org.jetbrains.compose.resources.pluralStringResource
 
 /**
  * Level-2 "source details" view, opened from a [SourceCard]'s details affordance.
@@ -125,7 +128,7 @@ internal fun SourceDetailsDialog(
                     Text(sourceSubtitle(source), fontSize = 12.sp, fontFamily = font, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 IconButton(onClick = onDismiss, modifier = Modifier.size(28.dp)) {
-                    Icon(MorpheIcons.Close, contentDescription = "Close", modifier = Modifier.size(15.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Icon(MorpheIcons.Close, contentDescription = stringResource(Res.string.close), modifier = Modifier.size(15.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
 
@@ -151,7 +154,12 @@ internal fun SourceDetailsDialog(
                         QuickSelectRow(isActiveSelection = isActiveSelection, enabled = enabled, onSelectSingle = onSelectSingle, accentColor = accents.primary, font = font)
                     }
 
-                    InfoRow(label = "Patches", value = patchCount?.let { if (it == 1) "1 patch" else "$it patches" } ?: "—", icon = MorpheIcons.Apps, font = font)
+                    InfoRow(
+                        label = stringResource(Res.string.source_details_patches_label),
+                        value = patchCount?.let { pluralStringResource(Res.plurals.patch_selection_group_patch_count, it, it) } ?: "—",
+                        icon = MorpheIcons.Apps,
+                        font = font,
+                    )
 
                     VersionRow(
                         state = state,
@@ -164,7 +172,7 @@ internal fun SourceDetailsDialog(
                         val url = source.url
                         if (url != null) {
                             MorpheButton(
-                                label = "Open in browser",
+                                label = stringResource(Res.string.source_details_open_in_browser),
                                 icon = MorpheIcons.OpenInNew,
                                 variant = MorpheButtonVariant.GHOST,
                                 enabled = enabled,
@@ -176,8 +184,8 @@ internal fun SourceDetailsDialog(
                         HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
 
                         ToggleRow(
-                            title = "Pre-release patches",
-                            subtitle = "Receives early access to new experimental patch versions",
+                            title = stringResource(Res.string.patch_source_dialog_pre_release_title),
+                            subtitle = stringResource(Res.string.patch_source_dialog_pre_release_hint),
                             checked = source.usePreRelease,
                             enabled = enabled,
                             accentColor = accents.primary,
@@ -186,8 +194,8 @@ internal fun SourceDetailsDialog(
                         )
                         if (isQuickMode) {
                             ToggleRow(
-                                title = "Experimental app versions",
-                                subtitle = "Prioritizes experimental app versions if available",
+                                title = stringResource(Res.string.patch_source_dialog_experimental_title),
+                                subtitle = stringResource(Res.string.patch_source_dialog_experimental_hint),
                                 checked = source.useExperimentalVersions,
                                 enabled = enabled,
                                 accentColor = accents.primary,
@@ -216,7 +224,7 @@ internal fun SourceDetailsDialog(
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                     if (mode == SourceSheetMode.MULTI_TOGGLE) {
                         MorpheButton(
-                            label = if (source.enabled) "Disable" else "Enable",
+                            label = if (source.enabled) stringResource(Res.string.source_details_disable) else stringResource(Res.string.source_details_enable),
                             variant = MorpheButtonVariant.GHOST,
                             enabled = enabled,
                             modifier = Modifier.weight(1f),
@@ -224,7 +232,7 @@ internal fun SourceDetailsDialog(
                         )
                     }
                     MorpheButton(
-                        label = "Refresh",
+                        label = stringResource(Res.string.patches_refresh_description),
                         icon = MorpheIcons.Refresh,
                         variant = MorpheButtonVariant.GHOST,
                         enabled = enabled,
@@ -235,7 +243,7 @@ internal fun SourceDetailsDialog(
                 if (canMoveUp || canMoveDown) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                         MorpheButton(
-                            label = "Move up",
+                            label = stringResource(Res.string.source_sheet_move_up_description),
                             icon = MorpheIcons.KeyboardArrowUp,
                             variant = MorpheButtonVariant.GHOST,
                             enabled = enabled && canMoveUp,
@@ -243,7 +251,7 @@ internal fun SourceDetailsDialog(
                             onClick = onMoveUp,
                         )
                         MorpheButton(
-                            label = "Move down",
+                            label = stringResource(Res.string.source_sheet_move_down_description),
                             icon = MorpheIcons.KeyboardArrowDown,
                             variant = MorpheButtonVariant.GHOST,
                             enabled = enabled && canMoveDown,
@@ -254,7 +262,7 @@ internal fun SourceDetailsDialog(
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                     MorpheButton(
-                        label = "Edit",
+                        label = stringResource(Res.string.source_sheet_edit_description),
                         icon = MorpheIcons.Edit,
                         variant = MorpheButtonVariant.GHOST,
                         enabled = enabled,
@@ -263,7 +271,7 @@ internal fun SourceDetailsDialog(
                     )
                     if (source.deletable) {
                         MorpheButton(
-                            label = "Delete",
+                            label = stringResource(Res.string.delete),
                             icon = MorpheIcons.Delete,
                             variant = MorpheButtonVariant.DANGER,
                             enabled = enabled,
@@ -304,11 +312,11 @@ private fun QuickSelectRow(
                 .padding(horizontal = 12.dp, vertical = 8.dp),
         ) {
             Icon(MorpheIcons.CheckCircle, contentDescription = null, tint = accentColor, modifier = Modifier.size(15.dp))
-            Text("Selected for Quick Patch", fontSize = 12.sp, fontWeight = FontWeight.Medium, fontFamily = font, color = accentColor)
+            Text(stringResource(Res.string.source_card_selected_quick_patch), fontSize = 12.sp, fontWeight = FontWeight.Medium, fontFamily = font, color = accentColor)
         }
     } else {
         MorpheButton(
-            label = "Use this source",
+            label = stringResource(Res.string.source_details_use_this_source),
             variant = MorpheButtonVariant.PRIMARY,
             enabled = enabled,
             modifier = Modifier.fillMaxWidth(),
@@ -372,10 +380,10 @@ private fun VersionRow(
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Icon(MorpheIcons.Update, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text("Version", fontSize = 10.sp, fontFamily = font, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(Res.string.home_apk_info_version_label), fontSize = 10.sp, fontFamily = font, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(
-                        state.version ?: (state.error?.let { "Unavailable" } ?: "—"),
+                        state.version ?: (state.error?.let { stringResource(Res.string.source_details_version_unavailable) } ?: "—"),
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium,
                         fontFamily = font,
@@ -384,13 +392,15 @@ private fun VersionRow(
                     if (state.version != null) ChannelBadge(channel = state.channel, font = font)
                 }
                 if (updateAvailableVersion != null) {
-                    Text("$updateAvailableVersion available", fontSize = 11.sp, fontFamily = font, color = accentColor)
+                    Text(stringResource(Res.string.source_details_update_available, updateAvailableVersion), fontSize = 11.sp, fontFamily = font, color = accentColor)
                 }
             }
             if (canExpand) {
                 Icon(
                     if (expanded) MorpheIcons.KeyboardArrowUp else MorpheIcons.KeyboardArrowDown,
-                    contentDescription = if (expanded) "Hide changelog" else "Show changelog",
+                    contentDescription = stringResource(
+                        if (expanded) Res.string.source_details_hide_changelog else Res.string.source_details_show_changelog
+                    ),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(16.dp),
                 )
@@ -414,10 +424,10 @@ private fun VersionRow(
             when {
                 loading -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
-                    Text("Loading changelog…", fontSize = 11.sp, fontFamily = font, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(Res.string.source_details_loading_changelog), fontSize = 11.sp, fontFamily = font, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 loadedEntries.isNullOrEmpty() -> Text(
-                    "No changelog available for this source",
+                    stringResource(Res.string.source_details_no_changelog),
                     fontSize = 11.sp,
                     fontFamily = font,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,

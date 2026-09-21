@@ -42,11 +42,10 @@ import app.morphe.gui.data.repository.AvatarRepository
 import app.morphe.gui.ui.icons.MorpheIcons
 import app.morphe.gui.ui.theme.LocalThemeState
 import app.morphe.gui.ui.theme.ThemePreference
-import app.morphe.morphe_desktop.generated.resources.Res
-import app.morphe.morphe_desktop.generated.resources.morphe_dark
-import app.morphe.morphe_desktop.generated.resources.morphe_light
+import app.morphe.morphe_desktop.generated.resources.*
 import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.koinInject
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * A patch source's visual identity: the built-in Morphe wordmark for [PatchSourceType.DEFAULT],
@@ -90,7 +89,7 @@ private fun DefaultSourceAvatar(size: Dp, modifier: Modifier) {
     AvatarShell(size, modifier, MaterialTheme.colorScheme.surfaceColorAtElevation(6.dp)) {
         Image(
             painter = painterResource(if (isDark) Res.drawable.morphe_dark else Res.drawable.morphe_light),
-            contentDescription = "Morphe",
+            contentDescription = stringResource(Res.string.app_name),
             modifier = Modifier.size(size * 0.6f),
         )
     }
@@ -101,7 +100,7 @@ private fun LocalSourceAvatar(size: Dp, modifier: Modifier) {
     AvatarShell(size, modifier, MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp)) {
         Icon(
             imageVector = MorpheIcons.Description,
-            contentDescription = "Local file",
+            contentDescription = stringResource(Res.string.patch_source_dialog_local_file_label),
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(size * 0.5f),
         )

@@ -5,56 +5,60 @@
 
 package app.morphe.gui.data.model
 
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import app.morphe.gui.util.darken
 import app.morphe.gui.util.lighten
 import app.morphe.gui.util.requiresLightContent
 import app.morphe.gui.util.toColorOrNull
+import app.morphe.morphe_desktop.generated.resources.*
 import kotlinx.serialization.Serializable
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * How every app card in the application is colored. One universal choice, not a choice per app:
  * the card a given app ends up with follows from this mode plus that app's own bundle colors.
  *
- * The manager carries its labels as string resources; desktop has no resource table, so they
- * are literals here. The semantics are the manager's unchanged.
+ * The labels are string resources, resolved where they are drawn through [label] and
+ * [description]; only the constant name is persisted.
  */
 @Serializable
-enum class AppCardColorMode(val label: String, val description: String) {
+enum class AppCardColorMode(val labelRes: StringResource, val descriptionRes: StringResource) {
     /** Cards keep the per-app colors declared by their patch bundle. */
-    DEFAULT(
-        "Default",
-        "Every card wears the color its patch bundle declares for that app.",
-    ),
+    DEFAULT(Res.string.card_fill_mode_default, Res.string.app_card_mode_default_desc),
 
     /** Cards follow the accent color, spread into a gradient so they keep their depth. */
-    ACCENT(
-        "Accent",
-        "Cards follow the accent color, and change with it.",
-    ),
+    ACCENT(Res.string.card_fill_mode_accent, Res.string.app_card_mode_accent_desc),
 
     /** A three-stop gradient, each stop either a fixed color or bound to the bundle. */
-    GRADIENT(
-        "Gradient",
-        "A gradient you choose, with each stop either fixed or following the app.",
-    ),
+    GRADIENT(Res.string.card_fill_mode_gradient, Res.string.app_card_mode_gradient_desc),
 
     /** One flat color, either fixed or bound to the bundle. */
-    SOLID(
-        "Solid",
-        "One flat color across every card.",
-    ),
+    SOLID(Res.string.card_fill_mode_solid, Res.string.app_card_mode_solid_desc);
+
+    val label: String
+        @Composable
+        get() = stringResource(labelRes)
+
+    val description: String
+        @Composable
+        get() = stringResource(descriptionRes)
 }
 
 /**
  * A position in the card's palette a color can be bound to. [SOLID] is the single stop of
  * [AppCardColorMode.SOLID] rather than a fourth gradient stop.
  */
-enum class AppCardColorStop(val title: String) {
-    START("Start"),
-    MIDDLE("Middle"),
-    END("End"),
-    SOLID("Color"),
+enum class AppCardColorStop(val titleRes: StringResource) {
+    START(Res.string.app_card_stop_start),
+    MIDDLE(Res.string.app_card_stop_middle),
+    END(Res.string.app_card_stop_end),
+    SOLID(Res.string.app_card_stop_solid);
+
+    val title: String
+        @Composable
+        get() = stringResource(titleRes)
 }
 
 /**

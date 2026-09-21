@@ -52,6 +52,8 @@ import app.morphe.gui.util.requiresLightContent
 import app.morphe.gui.util.toColorOrNull
 import app.morphe.gui.util.toHexString
 import app.morphe.gui.util.toHsv
+import app.morphe.morphe_desktop.generated.resources.*
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Switch offered above the picker controls for colors that can follow a value computed elsewhere.
@@ -171,7 +173,7 @@ fun ColorPickerDialog(
                             moveTo(hsv.copy(saturation = saturation, value = value))
                         },
                         height = 190.dp,
-                        contentDescription = "Shade",
+                        contentDescription = stringResource(Res.string.color_picker_shade),
                     )
                 }
 
@@ -218,7 +220,7 @@ fun ColorPickerDialog(
                             HueSlider(
                                 hue = hsv.hue,
                                 onChange = { moveTo(hsv.copy(hue = it)) },
-                                contentDescription = "Hue",
+                                contentDescription = stringResource(Res.string.color_picker_hue),
                             )
                         }
                     }
@@ -251,7 +253,7 @@ fun ColorPickerDialog(
                         // is said rather than acted on: the color on screen is the last good value
                         if (isHexError && enabled) {
                             Text(
-                                text = "Not a color. Use #RRGGBB or #AARRGGBB.",
+                                text = stringResource(Res.string.color_picker_invalid_hex),
                                 fontSize = 10.sp,
                                 fontFamily = font,
                                 fontWeight = FontWeight.Normal,
@@ -263,10 +265,10 @@ fun ColorPickerDialog(
             }
         },
         dismissButton = {
-            MorpheChoiceChip("Cancel", active = false, font = font, onClick = onDismiss)
+            MorpheChoiceChip(stringResource(Res.string.cancel), active = false, font = font, onClick = onDismiss)
         },
         confirmButton = {
-            MorpheChoiceChip("Save", active = true, font = font, onClick = { commit() })
+            MorpheChoiceChip(stringResource(Res.string.save), active = true, font = font, onClick = { commit() })
         },
     )
 }

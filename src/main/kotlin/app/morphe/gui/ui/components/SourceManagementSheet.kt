@@ -58,7 +58,10 @@ import app.morphe.gui.ui.theme.LocalMorpheAccents
 import app.morphe.gui.ui.theme.LocalMorpheCorners
 import app.morphe.gui.ui.theme.LocalMorpheFont
 import app.morphe.gui.util.EnabledSourcesLoader
+import app.morphe.morphe_desktop.generated.resources.*
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.pluralStringResource
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 
 /**
@@ -228,12 +231,17 @@ fun SourceManagementSheet(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("Patch sources", fontFamily = font, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+                Text(
+                    stringResource(Res.string.source_sheet_title),
+                    fontFamily = font,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 16.sp,
+                )
                 // Reload sources, which re-resolves a folder source to its newest .mpp.
-                IconButton(onClick = onRefresh, enabled = enabled, modifier = Modifier.size(28.dp)) {
+                IconButton(onClick = onRefresh, enabled = enabled, modifier = Modifier.size(28.dp).handCursor(enabled)) {
                     Icon(
                         imageVector = MorpheIcons.Refresh,
-                        contentDescription = "Reload patches",
+                        contentDescription = stringResource(Res.string.source_sheet_reload_description),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = if (enabled) 0.7f else 0.3f),
                         modifier = Modifier.size(16.dp),
                     )
@@ -242,10 +250,15 @@ fun SourceManagementSheet(
 
             Text(
                 text = when {
-                    !enabled -> "Disabled while patching"
-                    mode == SourceSheetMode.SINGLE_SELECT ->
-                        "${sources.size} sources · pick which one Quick Patch uses"
-                    else -> "${sources.size} sources · patches from every enabled source are unioned"
+                    !enabled -> stringResource(Res.string.disabled_while_patching)
+                    mode == SourceSheetMode.SINGLE_SELECT -> stringResource(
+                        Res.string.source_sheet_summary_quick_mode,
+                        pluralStringResource(Res.plurals.count_sources, sources.size, sources.size),
+                    )
+                    else -> stringResource(
+                        Res.string.source_sheet_summary_multi_mode,
+                        pluralStringResource(Res.plurals.count_sources, sources.size, sources.size),
+                    )
                 },
                 fontSize = 11.sp,
                 fontFamily = font,
@@ -330,8 +343,17 @@ fun SourceManagementSheet(
             DeveloperMppExclusionsSection(enabled = enabled)
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                TextButton(onClick = onDismiss, shape = RoundedCornerShape(corners.small)) {
-                    Text("Done", fontFamily = font, fontWeight = FontWeight.Normal, fontSize = 11.sp)
+                TextButton(
+                    onClick = onDismiss,
+                    shape = RoundedCornerShape(corners.small),
+                    modifier = Modifier.handCursor(),
+                ) {
+                    Text(
+                        stringResource(Res.string.source_sheet_done_button),
+                        fontFamily = font,
+                        fontWeight = FontWeight.Normal,
+                        fontSize = 11.sp,
+                    )
                 }
             }
         }
@@ -395,7 +417,7 @@ private fun AddSourceRow(onClick: () -> Unit, enabled: Boolean) {
         )
         Spacer(Modifier.width(8.dp))
         Text(
-            "Add source",
+            stringResource(Res.string.add_source),
             fontFamily = font,
             fontWeight = FontWeight.Medium,
             fontSize = 12.sp,
@@ -438,7 +460,7 @@ private fun DeveloperMppExclusionsSection(enabled: Boolean) {
                 .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)),
         )
         Text(
-            "Ignored .mpp patterns",
+            stringResource(Res.string.source_sheet_ignored_mpp_title),
             fontFamily = font,
             fontWeight = FontWeight.Medium,
             fontSize = 11.sp,
@@ -482,10 +504,7 @@ private fun ExcludedPatternsEditor(
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
-            text = "Only affects folder sources, which auto-load the newest .mpp in a folder. When " +
-                "picking that newest build, files whose name matches a pattern here are skipped. A " +
-                "plain word matches any file containing it (e.g. debug). Use * for globs (e.g. " +
-                "*-debug.mpp). *-sources.mpp and *-javadoc.mpp are always ignored",
+            text = stringResource(Res.string.source_sheet_ignored_mpp_hint),
             fontSize = 11.sp,
             fontWeight = FontWeight.Normal,
             fontFamily = font,
@@ -495,7 +514,7 @@ private fun ExcludedPatternsEditor(
         SlimTextField(
             value = draft,
             onValueChange = { draft = it },
-            placeholder = "e.g. debug or *-debug.mpp",
+            placeholder = stringResource(Res.string.source_sheet_ignored_mpp_placeholder),
             font = font,
             accents = accents,
             corners = corners,
@@ -509,7 +528,7 @@ private fun ExcludedPatternsEditor(
                 ) {
                     Icon(
                         imageVector = MorpheIcons.Add,
-                        contentDescription = "Add pattern",
+                        contentDescription = stringResource(Res.string.source_sheet_add_pattern_description),
                         modifier = Modifier.size(16.dp),
                         tint = if (draft.isNotBlank()) accents.primary
                         else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
@@ -538,7 +557,7 @@ private fun ExcludedPatternsEditor(
                 ) {
                     Icon(
                         imageVector = MorpheIcons.Close,
-                        contentDescription = "Remove pattern",
+                        contentDescription = stringResource(Res.string.source_sheet_remove_pattern_description),
                         modifier = Modifier.size(13.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                     )

@@ -42,6 +42,8 @@ import app.morphe.gui.ui.icons.MorpheIcons
 import app.morphe.gui.ui.theme.LocalMorpheAccents
 import app.morphe.gui.ui.theme.LocalMorpheCorners
 import app.morphe.gui.ui.theme.LocalMorpheFont
+import app.morphe.morphe_desktop.generated.resources.*
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * "Copy selection from another app/source" picker — Desktop-native UI for
@@ -90,7 +92,7 @@ fun CopySelectionDialog(
                         )
                         Spacer(Modifier.width(8.dp))
                         Text(
-                            "Copy selection from",
+                            stringResource(Res.string.copy_selection_title),
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold,
                             fontFamily = font,
@@ -100,7 +102,7 @@ fun CopySelectionDialog(
                         IconButton(onClick = onDismiss, modifier = Modifier.size(28.dp)) {
                             Icon(
                                 MorpheIcons.Close,
-                                contentDescription = "Close",
+                                contentDescription = stringResource(Res.string.close),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(16.dp),
                             )
@@ -108,7 +110,7 @@ fun CopySelectionDialog(
                     }
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        "Reuse a saved selection from another app, or from this app patched with a different source.",
+                        stringResource(Res.string.copy_selection_subtitle),
                         fontSize = 12.sp,
                         fontFamily = font,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -121,7 +123,7 @@ fun CopySelectionDialog(
                         }
                         candidates.isEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             Text(
-                                "No other saved selections yet — patch a couple of apps first.",
+                                stringResource(Res.string.copy_selection_empty),
                                 fontSize = 13.sp,
                                 fontFamily = font,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -181,7 +183,7 @@ private fun CandidateRow(
                 if (candidate.isSameSource) {
                     Spacer(Modifier.width(6.dp))
                     Text(
-                        "same source",
+                        stringResource(Res.string.copy_selection_same_source),
                         fontSize = 10.sp,
                         fontFamily = font,
                         color = accent,

@@ -1,3 +1,38 @@
+# [1.17.0-dev.6](https://github.com/MorpheApp/morphe-desktop/compare/v1.17.0-dev.5...v1.17.0-dev.6) (2026-09-20)
+
+
+### Bug Fixes
+
+* GUI improvements ([#319](https://github.com/MorpheApp/morphe-desktop/issues/319)) ([ee78d88](https://github.com/MorpheApp/morphe-desktop/commit/ee78d88aa281b074bca34005c0ce0883c6323bce))
+
+# [1.17.0-dev.5](https://github.com/MorpheApp/morphe-desktop/compare/v1.17.0-dev.4...v1.17.0-dev.5) (2026-09-20)
+
+
+### Bug Fixes
+
+* Update to latest Patcher ([1f3c796](https://github.com/MorpheApp/morphe-desktop/commit/1f3c7962ccc832579042c942c945c1a2dd02282b))
+
+# [1.17.0-dev.4](https://github.com/MorpheApp/morphe-desktop/compare/v1.17.0-dev.3...v1.17.0-dev.4) (2026-09-20)
+
+
+### Bug Fixes
+
+* Strip escaped apostrophes from Crowdin translations ([#320](https://github.com/MorpheApp/morphe-desktop/issues/320)) ([ffffe57](https://github.com/MorpheApp/morphe-desktop/commit/ffffe575b2f90db9f8b500bb6fd50d736b5991d2))
+
+# [1.17.0-dev.3](https://github.com/MorpheApp/morphe-desktop/compare/v1.17.0-dev.2...v1.17.0-dev.3) (2026-09-20)
+
+
+### Bug Fixes
+
+* Decouple UI localization from console logging and exceptions ([#318](https://github.com/MorpheApp/morphe-desktop/issues/318)) ([5ff50ee](https://github.com/MorpheApp/morphe-desktop/commit/5ff50eed110e0df7be8af660e22a8bd73a47a068))
+
+# [1.17.0-dev.2](https://github.com/MorpheApp/morphe-desktop/compare/v1.17.0-dev.1...v1.17.0-dev.2) (2026-09-18)
+
+
+### Features
+
+* Add Crowdin support ([#273](https://github.com/MorpheApp/morphe-desktop/issues/273)) ([b5b0243](https://github.com/MorpheApp/morphe-desktop/commit/b5b0243104620450da0097f8d0b7affa54f0afde))
+
 # [1.17.0-dev.1](https://github.com/MorpheApp/morphe-desktop/compare/v1.16.1-dev.1...v1.17.0-dev.1) (2026-09-17)
 
 

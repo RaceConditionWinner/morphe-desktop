@@ -36,12 +36,15 @@ import app.morphe.gui.ui.screens.patches.PatchSelectionScreen
 import app.morphe.gui.util.EnabledSourcesLoader
 import app.morphe.gui.util.FileUtils
 import app.morphe.gui.util.MorpheFilePicker
+import app.morphe.gui.util.PatchException
 import app.morphe.gui.util.VersionStatus
+import app.morphe.gui.util.humanizePatchLoadError
 import app.morphe.gui.util.sourceChannelMap
 import app.morphe.gui.util.sourceErrorMap
 import app.morphe.gui.util.sourcePatchCountMap
 import app.morphe.gui.util.sourceUpdateAvailableMap
 import app.morphe.gui.util.sourceVersionMap
+import app.morphe.morphe_desktop.generated.resources.*
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.koin.koinScreenModel
 import cafe.adriel.voyager.navigator.LocalNavigator
@@ -49,6 +52,8 @@ import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import java.io.File
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.getString
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 
 class HomeScreen : Screen {
@@ -183,7 +188,28 @@ fun HomeScreenContent(
             updateInfo = updateInfo,
             onDismiss = { detailRecord = null },
             onRepatch = { onRepatch(record.packageName) },
-            onUpdate = { viewModel.prepareUpdate(record) },
+            onUpdate = {
+                coroutineScope.launch {
+                    // The record is handed out with its input path already resolved to the
+                    // Morphe-managed original when there is one; only ask for the APK again
+                    // when nothing usable is left.
+                    if (!File(record.inputApkPath).exists()) {
+                        repatchMissingRecord = record
+                        return@launch
+                    }
+                    // No overrides: every enabled source resolves to its latest release,
+                    // without touching the version pins saved in settings.
+                    viewModel.resolvePatchFiles(emptyMap())
+                        .onSuccess { (files, names) ->
+                            launchPatch(record, record.inputApkPath, files, names)
+                        }
+                        .onFailure {
+                            viewModel.showError(
+                                (it as? PatchException)?.getUserMessage() ?: humanizePatchLoadError(it)
+                            )
+                        }
+                }
+            },
             onForget = { onForget(record.packageName) },
             onOpenFolder = {
                 FileUtils.revealInFileManager(File(record.outputApkPath).parentFile)
@@ -537,6 +563,6 @@ private fun handleContinue(
 
 private suspend fun openFilePicker(): File? =
     MorpheFilePicker.pickFile(
-        title = "Select APK file",
+        title = getString(Res.string.home_select_apk_file),
         extensions = listOf("apk", "apkm", "xapk", "apks"),
     )

@@ -72,6 +72,8 @@ import app.morphe.gui.ui.theme.LocalMorpheCorners
 import app.morphe.gui.ui.theme.LocalMorpheFont
 import app.morphe.gui.util.toColorOrNull
 import app.morphe.gui.util.toHexString
+import app.morphe.morphe_desktop.generated.resources.*
+import org.jetbrains.compose.resources.stringResource
 
 private const val MODE_COLUMNS = 2
 
@@ -196,7 +198,7 @@ fun AppCardColorDialog(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "App card colors",
+                    text = stringResource(Res.string.app_card_dialog_title),
                     fontSize = 16.sp,
                     fontWeight = FontWeight.SemiBold,
                     fontFamily = font,
@@ -204,7 +206,7 @@ fun AppCardColorDialog(
                     modifier = Modifier.weight(1f),
                 )
                 MorpheChoiceChip(
-                    text = "Reset",
+                    text = stringResource(Res.string.settings_dialog_reset_button),
                     active = false,
                     font = font,
                     icon = MorpheIcons.Refresh,
@@ -308,10 +310,10 @@ fun AppCardColorDialog(
             }
         },
         dismissButton = {
-            MorpheChoiceChip("Cancel", active = false, font = font, onClick = onDismiss)
+            MorpheChoiceChip(stringResource(Res.string.cancel), active = false, font = font, onClick = onDismiss)
         },
         confirmButton = {
-            MorpheChoiceChip("Save", active = true, font = font, onClick = { commit() })
+            MorpheChoiceChip(stringResource(Res.string.save), active = true, font = font, onClick = { commit() })
         },
     )
 
@@ -332,8 +334,8 @@ fun AppCardColorDialog(
             title = stop.title,
             currentColor = storedHex,
             toggle = ColorPickerToggle(
-                label = "Follow the app",
-                description = "Take this color from each app's own patch bundle.",
+                label = stringResource(Res.string.app_card_dialog_follow_app),
+                description = stringResource(Res.string.app_card_dialog_follow_app_desc),
                 token = AppCardColorDefaults.BUNDLE_COLOR_TOKEN,
                 previewColor = color,
                 previewGradient = remember(stop) { AppCardColorDefaults.bundleStopPreview(stop) },
@@ -437,7 +439,7 @@ private fun AppCardColorPreview(colors: List<Color>?, font: FontFamily) {
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Example app",
+                        text = stringResource(Res.string.card_fill_example_app_name),
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
                         fontFamily = font,
@@ -459,7 +461,7 @@ private fun AppCardColorPreview(colors: List<Color>?, font: FontFamily) {
                         .padding(horizontal = 8.dp, vertical = 4.dp),
                 ) {
                     Text(
-                        text = "Patched",
+                        text = stringResource(Res.string.home_your_apps_status_patched),
                         fontSize = 10.sp,
                         fontWeight = FontWeight.SemiBold,
                         fontFamily = font,
@@ -496,7 +498,7 @@ private fun AppCardColorItem(
             listOf(color, color)
         }
     }
-    val subtitle = if (followsBundle) "Follows the app" else color.toHexString()
+    val subtitle = if (followsBundle) stringResource(Res.string.app_card_dialog_follows_app) else color.toHexString()
 
     Row(
         modifier = Modifier
@@ -556,6 +558,9 @@ private fun ModeOptionCard(
     val hover = remember { MutableInteractionSource() }
     val isHovered by hover.collectIsHoveredAsState()
     val shape = RoundedCornerShape(corners.small)
+    val selectionDescription = stringResource(
+        if (selected) Res.string.a11y_state_selected else Res.string.a11y_state_not_selected
+    )
     val border = when {
         selected -> accents.primary
         isHovered -> MaterialTheme.colorScheme.outline
@@ -572,7 +577,7 @@ private fun ModeOptionCard(
             .clickable(onClick = onClick)
             .semantics(mergeDescendants = true) {
                 role = Role.RadioButton
-                stateDescription = if (selected) "Selected" else "Not selected"
+                stateDescription = selectionDescription
             }
             .padding(vertical = 10.dp),
         horizontalAlignment = Alignment.CenterHorizontally,

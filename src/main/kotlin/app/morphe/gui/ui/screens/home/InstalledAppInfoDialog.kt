@@ -31,7 +31,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -82,9 +81,11 @@ import app.morphe.gui.ui.theme.LocalMorpheFont
 import app.morphe.gui.ui.theme.LocalMorpheMono
 import app.morphe.gui.ui.theme.MorpheAccentColors
 import app.morphe.gui.ui.theme.MorpheCornerStyle
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import app.morphe.morphe_desktop.generated.resources.*
+import org.jetbrains.compose.resources.stringResource
+import org.jetbrains.compose.resources.pluralStringResource
+import app.morphe.gui.util.FormatUtils
+import app.morphe.gui.util.currentLocale
 
 /**
  * Desktop port of Morphe Manager 1.30.0's landscape `InstalledAppInfoDialog`
@@ -317,7 +318,7 @@ private fun ActionRail(
         ) {
             if (showPrimaryAction) {
                 RailPrimaryButton(
-                    label = "Repatch",
+                    label = stringResource(Res.string.home_action_repatch),
                     icon = MorpheIcons.AutoAwesome,
                     color = accents.primary,
                     font = font,
@@ -328,7 +329,7 @@ private fun ActionRail(
             }
             if (installPending) {
                 RailTileButton(
-                    label = if (installing) "Installing…" else "Install",
+                    label = if (installing) stringResource(Res.string.home_action_installing) else stringResource(Res.string.home_action_install),
                     icon = MorpheIcons.Download,
                     destructive = false,
                     enabled = !installing,
@@ -339,7 +340,7 @@ private fun ActionRail(
             }
             if (deviceInfo?.installed == true) {
                 RailTileButton(
-                    label = if (uninstalling) "Uninstalling…" else "Uninstall",
+                    label = if (uninstalling) stringResource(Res.string.home_action_uninstalling) else stringResource(Res.string.home_dialog_uninstall_button),
                     icon = MorpheIcons.Delete,
                     destructive = true,
                     enabled = !uninstalling,
@@ -349,7 +350,7 @@ private fun ActionRail(
                 )
             }
             RailTileButton(
-                label = "Open folder",
+                label = stringResource(Res.string.open_folder),
                 icon = MorpheIcons.FolderOpen,
                 destructive = false,
                 enabled = true,
@@ -358,7 +359,7 @@ private fun ActionRail(
                 onClick = onOpenFolder,
             )
             RailTileButton(
-                label = "Forget",
+                label = stringResource(Res.string.home_dialog_forget_button),
                 icon = MorpheIcons.PlaylistRemove,
                 destructive = true,
                 enabled = true,
@@ -367,7 +368,7 @@ private fun ActionRail(
                 onClick = { onDismiss(); onForget() },
             )
             RailTileButton(
-                label = "Reset saved patches",
+                label = stringResource(Res.string.installed_info_reset_saved_patches),
                 icon = MorpheIcons.Undo,
                 destructive = true,
                 enabled = true,
@@ -479,7 +480,7 @@ private fun RailCloseButton(font: FontFamily, corner: Dp, onClick: () -> Unit) {
         horizontalArrangement = Arrangement.Center,
     ) {
         Text(
-            "Close",
+            stringResource(Res.string.close),
             fontSize = 12.sp,
             fontWeight = FontWeight.Medium,
             fontFamily = font,
@@ -564,7 +565,7 @@ private fun AppInfoHeroHeader(
             Spacer(Modifier.height(10.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 HeroChip(text = "v${record.apkVersion.removePrefix("v")}", color = accents.secondary, font = font)
-                HeroChip(text = "Patched ${relativeOrShortDate(record.patchedAt)}", color = MaterialTheme.colorScheme.onSurfaceVariant, font = font)
+                HeroChip(text = stringResource(Res.string.installed_info_patched_when, relativeOrShortDate(record.patchedAt)), color = MaterialTheme.colorScheme.onSurfaceVariant, font = font)
                 if (deviceInfo != null) {
                     val (label, color) = deviceChipLabelAndColor(deviceInfo, accents)
                     HeroChip(text = label, color = color, icon = MorpheIcons.PhoneAndroid, font = font)
@@ -574,10 +575,14 @@ private fun AppInfoHeroHeader(
     }
 }
 
+@Composable
 private fun deviceChipLabelAndColor(info: DeviceAppInfo, accents: MorpheAccentColors): Pair<String, Color> = when {
-    !info.installed -> "Not on this device" to Color(0xFF8A8A8A)
-    info.signedByMorphe == false -> "Not Morphe-signed" to Color(0xFFE0504D)
-    else -> "On device" + (info.installedVersion?.let { " · v${it.removePrefix("v")}" } ?: "") to accents.secondary
+    !info.installed -> stringResource(Res.string.home_app_row_not_on_device) to Color(0xFF8A8A8A)
+    info.signedByMorphe == false -> stringResource(Res.string.installed_info_not_morphe_signed) to Color(0xFFE0504D)
+    else -> info.installedVersion?.removePrefix("v").let { version ->
+        if (version != null) stringResource(Res.string.home_app_row_on_device_with_version, version)
+        else stringResource(Res.string.home_app_row_on_device)
+    } to accents.secondary
 }
 
 @Composable
@@ -623,9 +628,9 @@ private fun AppInfoBanners(
                 WarningBanner(
                     icon = MorpheIcons.Warning,
                     tone = MaterialTheme.colorScheme.error,
-                    title = "Output APK missing",
-                    message = "The patched APK is no longer on disk. Repatch to restore it.",
-                    buttonText = "Repatch",
+                    title = stringResource(Res.string.installed_info_apk_missing_title),
+                    message = stringResource(Res.string.installed_info_apk_missing_message),
+                    buttonText = stringResource(Res.string.home_action_repatch),
                     font = font,
                     corner = corners.small,
                     onClick = onRepatch,
@@ -636,25 +641,32 @@ private fun AppInfoBanners(
                 Notice(
                     icon = MorpheIcons.Warning,
                     tone = accents.warning,
-                    text = "This output APK was modified outside Morphe since it was patched.",
+                    text = stringResource(Res.string.installed_info_modified_notice),
                     font = font,
                     corner = corners.small,
                 )
             }
         }
         if (!isDeleted && installPending) {
-            val sub = if (deviceInfo?.installed == true) {
-                "v${record.apkVersion.removePrefix("v")} ready · device on v${deviceInfo.installedVersion?.removePrefix("v") ?: "?"}"
-            } else {
-                "v${record.apkVersion.removePrefix("v")} ready — no repatch needed"
-            }
             add {
+                val readyVersion = record.apkVersion.removePrefix("v")
+                val sub = if (deviceInfo?.installed == true) {
+                    stringResource(
+                        Res.string.home_detail_ready_device_version,
+                        readyVersion,
+                        deviceInfo.installedVersion?.removePrefix("v") ?: "?"
+                    )
+                } else {
+                    stringResource(Res.string.home_detail_ready_no_repatch, readyVersion)
+                }
                 WarningBanner(
                     icon = MorpheIcons.Download,
                     tone = accents.secondary,
-                    title = if (installing) "Installing…" else "Ready to install",
+                    title = if (installing) stringResource(Res.string.home_action_installing)
+                        else stringResource(Res.string.installed_info_ready_to_install),
                     message = sub,
-                    buttonText = if (installing) "Installing…" else "Install",
+                    buttonText = if (installing) stringResource(Res.string.home_action_installing)
+                        else stringResource(Res.string.home_action_install),
                     enabled = !installing,
                     font = font,
                     corner = corners.small,
@@ -667,9 +679,9 @@ private fun AppInfoBanners(
                 WarningBanner(
                     icon = MorpheIcons.Update,
                     tone = accents.primary,
-                    title = "Update available",
-                    message = updateSummary(updateInfo) ?: "A newer patch or app version is available.",
-                    buttonText = "Update",
+                    title = stringResource(Res.string.installed_info_update_available_title),
+                    message = updateSummary(updateInfo) ?: stringResource(Res.string.installed_info_update_available_message),
+                    buttonText = stringResource(Res.string.home_action_update),
                     font = font,
                     corner = corners.small,
                     onClick = onUpdate,
@@ -759,15 +771,17 @@ private fun Notice(icon: ImageVector, tone: Color, text: String, font: FontFamil
 
 /** One-line summary of what an UPDATE will move to (patch + app versions). Same
  *  formatting the old Desktop detail dialog used, kept for consistent messaging. */
+@Composable
 private fun updateSummary(u: RecallUpdateInfo): String? {
     val parts = mutableListOf<String>()
     val outdated = u.sources.filter { it.outdated && it.latestAvailableVersion != null }
     outdated.firstOrNull()?.let { s ->
         val more = outdated.size - 1
-        parts += "→ patches v${s.latestAvailableVersion!!.removePrefix("v")}" + if (more > 0) " +$more" else ""
+        parts += stringResource(Res.string.installed_info_update_patches, s.latestAvailableVersion!!.removePrefix("v")) +
+            if (more > 0) " +$more" else ""
     }
     if (u.appOutdated && u.appSuggestedVersion != null) {
-        parts += "app v${u.appSuggestedVersion.removePrefix("v")}"
+        parts += stringResource(Res.string.installed_info_update_app, u.appSuggestedVersion.removePrefix("v"))
     }
     return parts.joinToString(" · ").ifBlank { null }
 }
@@ -794,27 +808,37 @@ private fun AppInfoSection(
             .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f), RoundedCornerShape(corners.medium))
             .padding(vertical = 6.dp),
     ) {
-        SectionLabel("Information", font)
-        InfoRow(MorpheIcons.Apps, "Package", record.packageName, font, mono)
+        SectionLabel(stringResource(Res.string.installed_info_section_information), font)
+        InfoRow(MorpheIcons.Apps, stringResource(Res.string.installed_info_label_package), record.packageName, font, mono)
         if (!record.currentPackageName.isNullOrBlank() && record.currentPackageName != record.packageName) {
-            InfoRow(MorpheIcons.DeployedCode, "Installs as", record.currentPackageName, font, mono)
+            InfoRow(MorpheIcons.DeployedCode, stringResource(Res.string.installed_info_label_installs_as), record.currentPackageName, font, mono)
         }
-        InfoRow(MorpheIcons.Info, "App version", "v${record.apkVersion.removePrefix("v")}", font, mono)
-        InfoRow(MorpheIcons.Info, "Patched", fullDate(record.patchedAt), font, mono)
-        InfoRow(MorpheIcons.DeployedCode, "Patched with", "Morphe ${record.patchedWithMorpheVersion}", font, mono)
-        InfoRow(MorpheIcons.Save, "Output size", humanSize(record.outputApkSize), font, mono)
+        InfoRow(MorpheIcons.Info, stringResource(Res.string.home_detail_app_version_label), "v${record.apkVersion.removePrefix("v")}", font, mono)
+        InfoRow(MorpheIcons.Info, stringResource(Res.string.home_your_apps_status_patched), fullDate(record.patchedAt), font, mono)
+        InfoRow(
+            MorpheIcons.DeployedCode,
+            stringResource(Res.string.installed_info_label_patched_with),
+            "${stringResource(Res.string.app_name)} ${record.patchedWithMorpheVersion}",
+            font,
+            mono,
+        )
+        InfoRow(MorpheIcons.Save, stringResource(Res.string.home_detail_output_size_label), humanSize(record.outputApkSize), font, mono)
         record.outputApkSha256?.let {
-            InfoRow(MorpheIcons.Key, "Integrity", "${it.take(16)}…", font, mono)
+            InfoRow(MorpheIcons.Key, stringResource(Res.string.installed_info_label_integrity), "${it.take(16)}…", font, mono)
         }
-        InfoRow(MorpheIcons.FolderOpen, "Location", record.outputApkPath, font, mono, wrap = true)
+        InfoRow(MorpheIcons.FolderOpen, stringResource(Res.string.installed_info_label_location), record.outputApkPath, font, mono, wrap = true)
 
         val sourceRows = updateInfo?.sources
         if (!sourceRows.isNullOrEmpty()) {
             HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.10f), modifier = Modifier.padding(vertical = 4.dp))
-            SectionLabel("Sources", font)
+            SectionLabel(stringResource(Res.string.installed_info_section_sources), font)
             sourceRows.forEach { s ->
                 val value = if (s.outdated && s.latestAvailableVersion != null) {
-                    "v${s.usedVersion.removePrefix("v")} → v${s.latestAvailableVersion.removePrefix("v")} available"
+                    stringResource(
+                        Res.string.installed_info_source_update_available,
+                        s.usedVersion.removePrefix("v"),
+                        s.latestAvailableVersion.removePrefix("v"),
+                    )
                 } else {
                     "v${s.usedVersion.removePrefix("v")}"
                 }
@@ -822,7 +846,7 @@ private fun AppInfoSection(
             }
         } else if (record.sourcesSnapshot.isNotEmpty()) {
             HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.10f), modifier = Modifier.padding(vertical = 4.dp))
-            SectionLabel("Sources", font)
+            SectionLabel(stringResource(Res.string.installed_info_section_sources), font)
             record.sourcesSnapshot.forEach { src ->
                 InfoRow(MorpheIcons.Route, src.sourceName, "v${src.version.removePrefix("v")}", font, mono)
             }
@@ -831,9 +855,16 @@ private fun AppInfoSection(
         HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.10f), modifier = Modifier.padding(vertical = 4.dp))
         ActionableInfoRow(
             icon = MorpheIcons.DoneAll,
-            label = "Applied patches",
-            value = "$patchCount across ${record.patchSelectionByBundle.size} bundle" +
-                if (record.patchSelectionByBundle.size == 1) "" else "s",
+            label = stringResource(Res.string.installed_info_applied_patches),
+            value = stringResource(
+                Res.string.installed_info_applied_patches_value,
+                patchCount,
+                pluralStringResource(
+                    Res.plurals.installed_info_bundle_count,
+                    record.patchSelectionByBundle.size,
+                    record.patchSelectionByBundle.size,
+                ),
+            ),
             font = font,
             mono = mono,
             onClick = onOpenAppliedPatches,
@@ -963,7 +994,7 @@ private fun AppliedPatchesDialog(
                         Icon(MorpheIcons.DoneAll, contentDescription = null, tint = accents.primary, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
                         Text(
-                            "Applied patches",
+                            stringResource(Res.string.installed_info_applied_patches),
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold,
                             fontFamily = font,
@@ -1012,11 +1043,10 @@ private fun AppliedPatchesDialog(
                                     ) {
                                         Icon(
                                             if (isMuted) MorpheIcons.VisibilityOff else MorpheIcons.Visibility,
-                                            contentDescription = if (isMuted) {
-                                                "Offer patches from this source for this app again"
-                                            } else {
-                                                "Stop offering patches from this source for this app"
-                                            },
+                                            contentDescription = stringResource(
+                                                if (isMuted) Res.string.installed_info_unmute_source_description
+                                                else Res.string.installed_info_mute_source_description
+                                            ),
                                             tint = if (isMuted) {
                                                 MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                                             } else {
@@ -1092,7 +1122,7 @@ private fun AppliedPatchesSearchField(value: String, onValueChange: (String) -> 
                 Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
                     if (value.isEmpty()) {
                         Text(
-                            "Search patches…",
+                            stringResource(Res.string.patches_search_hint),
                             fontSize = 12.sp,
                             fontFamily = font,
                             fontWeight = FontWeight.Normal,
@@ -1111,22 +1141,24 @@ private fun AppliedPatchesSearchField(value: String, onValueChange: (String) -> 
 // Desktop dialog used, so behaviour/wording doesn't regress).
 // ============================================================================
 
+@Composable
 private fun fullDate(millis: Long): String =
-    SimpleDateFormat("MMM d, yyyy · h:mm a", Locale.US).format(Date(millis))
+    FormatUtils.formatDateTime(millis, currentLocale())
 
+@Composable
 private fun relativeOrShortDate(millis: Long): String {
     val now = System.currentTimeMillis()
     val days = ((now - millis) / 86_400_000L).toInt()
     return when {
-        days <= 0 -> "today"
-        days == 1 -> "yesterday"
-        days < 7 -> "${days}d ago"
-        else -> SimpleDateFormat("MMM d", Locale.US).format(Date(millis))
+        days <= 0 -> stringResource(Res.string.home_date_today)
+        days == 1 -> stringResource(Res.string.home_date_yesterday)
+        days < 7 -> stringResource(Res.string.home_date_days_ago, days)
+        else -> FormatUtils.formatShortDate(millis, currentLocale())
     }
 }
 
+@Composable
 private fun humanSize(bytes: Long): String {
     if (bytes <= 0) return "-"
-    val mb = bytes / 1_048_576.0
-    return if (mb >= 1) "%.1f MB".format(mb) else "%.0f KB".format(bytes / 1024.0)
+    return FormatUtils.formatFileSize(bytes, currentLocale())
 }
