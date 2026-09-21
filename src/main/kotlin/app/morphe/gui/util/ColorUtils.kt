@@ -8,7 +8,6 @@ package app.morphe.gui.util
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import java.awt.Color as AwtColor
-import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -51,12 +50,6 @@ fun List<Color>.blend(): Color = when {
         alpha = sumOf { it.alpha.toDouble() }.toFloat() / size,
     )
 }
-
-/** Determine if a color represents a dark background. */
-fun Color.isDarkBackground(): Boolean = luminance() < 0.5f
-
-/** Returns true if the color is near-black or near-white, where tinted surfaces look better than a direct tint. */
-fun Color.isExtremeAccent(): Boolean = luminance() !in 0.04f..0.92f
 
 /**
  * Composites this color at [alpha] over [background] and returns the opaque result.
@@ -138,26 +131,6 @@ fun Color.toHexString(includeAlpha: Boolean = false): String {
 fun Color.toArgbInt(): Int {
     fun channel(v: Float) = (v * 255f + 0.5f).toInt().coerceIn(0, 255)
     return (channel(alpha) shl 24) or (channel(red) shl 16) or (channel(green) shl 8) or channel(blue)
-}
-
-/**
- * Adjusts the color so it has sufficient contrast against [background].
- * If the accent is too close to the background (same lightness zone),
- * it is lightened or darkened until it passes the [minLuminanceDiff] threshold.
- */
-fun Color.ensureContrast(
-    background: Color,
-    minLuminanceDiff: Float = 0.05f,
-): Color {
-    val bgLum = background.luminance()
-    val fgLum = luminance()
-    val diff = abs(bgLum - fgLum)
-    if (diff >= minLuminanceDiff) return this
-    return if (bgLum > 0.5f) {
-        darken((minLuminanceDiff - diff + 0.05f).coerceIn(0f, 0.8f))
-    } else {
-        lighten((minLuminanceDiff - diff + 0.05f).coerceIn(0f, 0.8f))
-    }
 }
 
 /**

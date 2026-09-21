@@ -94,30 +94,8 @@ class SourceMuteRepository(
         mutex.withLock { load()[packageName]?.toSet() ?: emptySet() }
     }
 
-    /** Full snapshot: packageName -> muted source ids. */
-    suspend fun mutedSources(): Map<String, Set<String>> = withContext(Dispatchers.IO) {
-        mutex.withLock { load().mapValues { (_, v) -> v.toSet() } }
-    }
-
-    /** The same exclusions read the other way round: apps kept from each source. */
-    suspend fun mutedApps(): Map<String, Set<String>> = withContext(Dispatchers.IO) {
-        mutex.withLock {
-            load().entries
-                .flatMap { (pkg, sources) -> sources.map { it to pkg } }
-                .groupBy({ it.first }, { it.second })
-                .mapValues { it.value.toSet() }
-        }
-    }
-
-    /** Rules every source out for [packageName] except [keepId], out of [candidates]. */
-    suspend fun keepOnly(packageName: String, keepId: String, candidates: Set<String>) =
-        replaceForPackage(packageName, candidates - keepId)
-
     suspend fun mute(packageName: String, sourceId: String) =
         replaceForPackage(packageName, getMutedFor(packageName) + sourceId)
-
-    /** Offers every source to [packageName] again. */
-    suspend fun unmuteAll(packageName: String) = replaceForPackage(packageName, emptySet())
 
     suspend fun unmute(packageName: String, sourceId: String) =
         replaceForPackage(packageName, getMutedFor(packageName) - sourceId)
@@ -136,45 +114,6 @@ class SourceMuteRepository(
                 persist(all.mapValues { it.value.toSet() })
                 _version.value++
             }
-        }
-    }
-
-    /** Sources at least one app is kept from — the other half of what a backup has to cover. */
-    suspend fun getAllMutedSourceIds(): Set<String> = withContext(Dispatchers.IO) {
-        mutex.withLock { load().values.flatten().toSet() }
-    }
-
-    /** The apps kept from [sourceId], which a backup carries alongside that source's selection. */
-    suspend fun exportForSource(sourceId: String): Set<String> = mutedApps()[sourceId].orEmpty()
-
-    /** Replaces what a backup says about [sourceId], for a restore that starts from a clean slate. */
-    suspend fun importForSource(sourceId: String, packageNames: Collection<String>) = withContext(Dispatchers.IO) {
-        mutex.withLock {
-            val all = load()
-            // Clear sourceId from every package first (clean-slate restore), then reapply.
-            val toDrop = mutableListOf<String>()
-            for ((pkg, sources) in all) {
-                sources.remove(sourceId)
-                if (sources.isEmpty()) toDrop += pkg
-            }
-            toDrop.forEach { all.remove(it) }
-            for (pkg in packageNames) {
-                all.getOrPut(pkg) { mutableSetOf() }.add(sourceId)
-            }
-            persist(all.mapValues { it.value.toSet() })
-            _version.value++
-        }
-    }
-
-    /** Adds what a backup says about [sourceId] to what this install already rules out. */
-    suspend fun mergeForSource(sourceId: String, packageNames: Collection<String>) = withContext(Dispatchers.IO) {
-        mutex.withLock {
-            val all = load()
-            for (pkg in packageNames) {
-                all.getOrPut(pkg) { mutableSetOf() }.add(sourceId)
-            }
-            persist(all.mapValues { it.value.toSet() })
-            _version.value++
         }
     }
 

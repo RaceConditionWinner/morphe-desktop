@@ -53,7 +53,6 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import java.io.File
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.getString
-import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 
 class HomeScreen : Screen {
@@ -197,9 +196,9 @@ fun HomeScreenContent(
                         repatchMissingRecord = record
                         return@launch
                     }
-                    // No overrides: every enabled source resolves to its latest release,
-                    // without touching the version pins saved in settings.
-                    viewModel.resolvePatchFiles(emptyMap())
+                    // Every enabled source resolves to its latest release, without touching
+                    // the version pins saved in settings.
+                    viewModel.resolvePatchFiles()
                         .onSuccess { (files, names) ->
                             launchPatch(record, record.inputApkPath, files, names)
                         }

@@ -201,14 +201,6 @@ class PatchRepository(
         return result
     }
 
-    /** Get cached patch file for a specific version. */
-    fun getCachedPatches(version: String): File? {
-        val patchesDir = PatchCache.sourceDir(repoPath)
-        return patchesDir.listFiles()?.find {
-            it.name.contains(version) && isPatchFileName(it.name)
-        }
-    }
-
     private fun isPatchFileName(name: String): Boolean =
         name.endsWith(".mpp", ignoreCase = true)
 

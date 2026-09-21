@@ -108,14 +108,6 @@ class PatchBundleLoadGuard(
         writeLedger()
     }
 
-    /** Whether [sourceId] is currently held back (without attempting a load or throwing). */
-    fun isHeldBack(sourceId: String, patchesJar: File): Boolean = synchronized(lock) {
-        prepare()
-        val strike = strikes[sourceId] ?: return@synchronized false
-        val stamp = FileStamp.of(patchesJar)?.toString() ?: "unknown"
-        strike.stamp == stamp && strike.count >= HELD_BACK_AFTER
-    }
-
     private fun recordInterruptedLoads() {
         val markers = stateDir.listFiles { f -> f.name.startsWith(IN_FLIGHT_PREFIX) } ?: return
         if (markers.isEmpty()) return

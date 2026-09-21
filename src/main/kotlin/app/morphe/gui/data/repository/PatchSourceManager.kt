@@ -77,7 +77,7 @@ class PatchSourceManager(
      * Call once at app startup (from a LaunchedEffect).
      */
     suspend fun initialize() {
-        // Load first (fast, disk-only) so isSourceBlocked/addSource enforce the
+        // Load first (fast, disk-only) so addSource enforces the
         // last-known state even before refresh() completes; then best-effort
         // refresh from the network. A failed refresh silently keeps the cached
         // state — see BlocklistRepository.refresh().
@@ -262,16 +262,6 @@ class PatchSourceManager(
     }
 
     /**
-     * Whether [source] is currently on the remote blocklist. Exposed for the UI
-     * (e.g. to grey out / flag an already-added source that's since been
-     * blocked) — mirrors morphe-manager's `PatchBundleRepository.blockedSources`.
-     */
-    fun isSourceBlocked(source: PatchSource): Boolean {
-        val key = source.url?.let(blocklistRepository::toBlocklistKey) ?: return false
-        return blocklistRepository.isBlocked(key)
-    }
-
-    /**
      * Remove a source by id. Refuses non-deletable (default) sources. Drops the
      * cached repo for that id so a re-add doesn't reuse stale state.
      */
@@ -305,9 +295,6 @@ class PatchSourceManager(
         val muted = sourceMuteRepository.getMutedFor(packageName)
         return cachedEnabledSources.withoutMutedSources(muted) { it.id }
     }
-
-    suspend fun isSourceMutedForApp(packageName: String, sourceId: String): Boolean =
-        sourceId in sourceMuteRepository.getMutedFor(packageName)
 
     suspend fun mutedSourceIdsForApp(packageName: String): Set<String> =
         sourceMuteRepository.getMutedFor(packageName)
@@ -349,9 +336,6 @@ class PatchSourceManager(
 
     suspend fun unmuteSourceForApp(packageName: String, sourceId: String) =
         sourceMuteRepository.unmute(packageName, sourceId)
-
-    suspend fun unmuteAllSourcesForApp(packageName: String) =
-        sourceMuteRepository.unmuteAll(packageName)
 
     /**
      * Persist a new source ordering. Order affects only the display-name

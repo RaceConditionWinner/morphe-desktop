@@ -6,7 +6,6 @@
 package app.morphe.gui.ui.screens.home
 
 import app.morphe.engine.MorpheData
-import app.morphe.engine.MultiSourceLoader
 import app.morphe.engine.PatchEngine.Config.Companion.DEFAULT_KEYSTORE_ALIAS
 import app.morphe.engine.OriginalApkRepository
 import app.morphe.engine.PatchedAppStore
@@ -17,7 +16,6 @@ import app.morphe.engine.util.ApkManifestReader
 import app.morphe.engine.util.SignatureIdentity
 import app.morphe.gui.data.constants.AppConstants
 import app.morphe.gui.data.model.Patch
-import app.morphe.gui.data.model.FollowMode
 import app.morphe.gui.data.model.SourceVersionPref
 import app.morphe.gui.data.model.SupportedApp
 import app.morphe.gui.data.repository.ActiveMode
@@ -580,7 +578,6 @@ class HomeViewModel(
     ): RecallUpdateInfo {
         val resolvedBySource = resolvedVersionBySource()   // what Re-patch will use right now
         val latestBySource = latestAvailableBySource()     // newest available (may need downloading)
-        val changedSources = relevantSourceUpdates[record.packageName].orEmpty()
         val sources = record.sourcesSnapshot
             // Only sources that actually contributed patches. The selection map has an
             // (empty) entry per enabled bundle, so an enabled-but-unused source has an
@@ -597,7 +594,6 @@ class HomeViewModel(
                     resolvedVersion = resolvedBySource[snap.sourceId],
                     latestAvailableVersion = latest,
                     outdated = isNewerVersion(latest, snap.version),
-                    hasRelevantChanges = snap.sourceId in changedSources,
                 )
             }
         val app = apps.find { it.packageName == record.packageName }
@@ -722,13 +718,11 @@ class HomeViewModel(
         // source version (not just what's currently downloaded) so "update
         // available" surfaces without the user first selecting the newer file.
         val latestBySource = latestAvailableBySource()
-        val relevant = mutableMapOf<String, Set<String>>()
         val states = apps.associate { app ->
             val record = records[app.packageName]
             val output = record?.let { File(it.outputApkPath) }
             val changedSources =
                 if (record == null) emptySet() else relevantUpdatedSources(record, app, latestBySource)
-            if (changedSources.isNotEmpty()) relevant[app.packageName] = changedSources
             val sourceUpdate = changedSources.isNotEmpty()
             app.packageName to when {
                 record == null -> PatchedAppState.NEVER_PATCHED
@@ -741,7 +735,6 @@ class HomeViewModel(
                 else -> PatchedAppState.PATCHED
             }
         }
-        relevantSourceUpdates = relevant
         states
     } catch (e: Exception) {
         Logger.error("Failed to compute patched-app states", e)
@@ -768,165 +761,34 @@ class HomeViewModel(
         return if (resolved.absolutePath == record.inputApkPath) record else record.copy(inputApkPath = resolved.absolutePath)
     }
 
-    suspend fun apkVersionOf(path: String): String? = withContext(Dispatchers.IO) {
-        runCatching { parseApkManifest(File(path))?.versionName }.getOrNull()
-    }
-
-    fun activePatchSources(): List<ActivePatchSource> =
-        cachedSourcesResult?.resolved
-            ?.filter { it.patchFile != null }
-            ?.map { ActivePatchSource(it.source.id, it.source.name, it.resolvedVersion) }
-            ?: emptyList()
-
-    suspend fun availableBundleVersions(sourceName: String): List<BundleRelease> {
-        val repo = patchSourceManager.getEnabledRepositories()
-            .firstOrNull { (source, _) -> source.name == sourceName }
-            ?.second
-            ?: return emptyList()
-        return repo.fetchReleases().getOrNull()
-            ?.map { BundleRelease(it.tagName, it.isDevRelease()) }
-            .orEmpty()
-    }
-
-    suspend fun isBundleCached(sourceName: String, tag: String): Boolean {
-        val repo = patchSourceManager.getEnabledRepositories()
-            .firstOrNull { (source, _) -> source.name == sourceName }
-            ?.second
-            ?: return true
-        return repo.getCachedPatches(tag) != null
-    }
-
-    private val bundleSupportCache = mutableMapOf<String, List<SupportedApp>>()
-
-    suspend fun supportedAppFor(
-        packageName: String,
-        overrides: Map<String, BundleChoice>,
-    ): BundleSupport {
-        val resolvedByName = cachedSourcesResult?.resolved
-            ?.associateBy { it.source.name }
-            .orEmpty()
-
-        var isCurrent = true
-        val missing = mutableListOf<Pair<String, String>>()
-        val inputs = mutableListOf<MultiSourceLoader.SourceInput>()
-
-        for ((source, repo) in patchSourceManager.getEnabledRepositories()) {
-            val resolved = resolvedByName[source.name]
-            when (val choice = overrides[source.name]) {
-                is BundleChoice.Version -> {
-                    if (choice.tag != resolved?.resolvedVersion) isCurrent = false
-                    val cached = repo?.getCachedPatches(choice.tag)
-                    when {
-                        cached != null ->
-                            inputs += MultiSourceLoader.SourceInput(source.id, source.name, cached)
-                        repo == null -> resolved?.patchFile?.let {
-                            inputs += MultiSourceLoader.SourceInput(source.id, source.name, it)
-                        }
-                        else -> missing += source.name to choice.tag
-                    }
-                }
-                is BundleChoice.LocalFile -> {
-                    isCurrent = false
-                    File(choice.path).takeIf { it.exists() }?.let {
-                        inputs += MultiSourceLoader.SourceInput(source.id, source.name, it)
-                    }
-                }
-                null -> resolved?.patchFile?.let {
-                    inputs += MultiSourceLoader.SourceInput(source.id, source.name, it)
-                }
-            }
-        }
-
-        if (isCurrent) {
-            return BundleSupport(
-                app = _uiState.value.supportedApps.firstOrNull { it.packageName == packageName },
-                missing = emptyList(),
-                isCurrent = true,
-            )
-        }
-        if (missing.isNotEmpty()) return BundleSupport(null, missing, isCurrent = false)
-        if (inputs.isEmpty()) return BundleSupport(null, emptyList(), isCurrent = false)
-
-        val key = inputs.map { it.patchFile.absolutePath }.sorted().joinToString("|")
-        val apps = bundleSupportCache.getOrPut(key) {
-            SupportedAppExtractor.extractSupportedApps(
-                patchService.convertToGuiPatches(MultiSourceLoader.load(inputs).allPatches)
-            )
-        }
-        return BundleSupport(
-            app = apps.firstOrNull { it.packageName == packageName },
-            missing = emptyList(),
-            isCurrent = false,
-        )
-    }
-
-    suspend fun downloadBundle(
-        sourceName: String,
-        tag: String,
-        onProgress: (Float) -> Unit = {},
-    ): Result<Unit> {
-        val repo = patchSourceManager.getEnabledRepositories()
-            .firstOrNull { (source, _) -> source.name == sourceName }
-            ?.second
-            ?: return Result.failure(IllegalStateException("No repository configured for source '$sourceName'"))
-        val release = repo.fetchReleases().getOrNull()?.firstOrNull { it.tagName == tag }
-            ?: return Result.failure(IllegalStateException("Release '$tag' not found in source '$sourceName'"))
-        return repo.downloadPatches(release, onProgress).map { }
-    }
-
+    /**
+     * Resolves every enabled source to its latest release, downloading what is missing, without
+     * touching the version prefs saved in settings. Returns the .mpp paths and the matching
+     * source names, in the same order.
+     */
     suspend fun resolvePatchFiles(
-        overrides: Map<String, BundleChoice>,
         onDownloadProgress: ((String, Float) -> Unit)? = null,
     ): Result<Pair<List<String>, List<String>>> = try {
-        val enabled = patchSourceManager.getEnabledRepositories()
-        val idByName = enabled.associate { (source, _) -> source.name to source.id }
-        val localFiles = overrides.mapNotNull { (name, choice) ->
-            (choice as? BundleChoice.LocalFile)?.let { name to File(it.path) }
-        }.toMap()
-
-        val prefs = overrides.mapNotNull { (name, choice) ->
-            val id = idByName[name] ?: return@mapNotNull null
-            (choice as? BundleChoice.Version)?.let {
-                id to SourceVersionPref(mode = FollowMode.PINNED, pinnedTag = it.tag)
-            }
-        }.toMap()
-
         val result = EnabledSourcesLoader.loadAll(
-            enabled.filterNot { (source, _) -> source.name in localFiles },
+            patchSourceManager.getEnabledRepositories(),
             patchService,
-            prefs,
+            emptyMap(),
             configRepository.loadConfig().excludedMppPatterns,
             onDownloadProgress,
         )
         val resolvedOk = result.resolved.filter { it.patchFile != null }
 
-        val files = mutableListOf<String>()
-        val names = mutableListOf<String>()
-        resolvedOk.forEach { r ->
-            files += r.patchFile!!.absolutePath
-            names += r.source.name
-        }
-        localFiles.forEach { (name, file) ->
-            if (!file.exists()) {
-                return Result.failure(PatchException("Patch file not found: ${file.name}", Res.string.error_patch_file_not_found, listOf(file.name)))
-            }
-            files += file.absolutePath
-            names += name
-        }
-
-        if (files.isEmpty()) {
+        if (resolvedOk.isEmpty()) {
             Result.failure(PatchException("Could not resolve patch files", Res.string.home_could_not_resolve_patch_files))
         } else {
-            Result.success(files to names)
+            Result.success(resolvedOk.map { it.patchFile!!.absolutePath } to resolvedOk.map { it.source.name })
         }
     } catch (e: CancellationException) {
         throw e
     } catch (e: Exception) {
-        Logger.error("Failed to resolve patch files with overrides", e)
+        Logger.error("Failed to resolve patch files", e)
         Result.failure(e)
     }
-
-    private var relevantSourceUpdates: Map<String, Set<String>> = emptyMap()
 
     private suspend fun relevantUpdatedSources(
         record: PatchedAppRecord,
@@ -1418,29 +1280,6 @@ class HomeViewModel(
 }
 
 /** Home-screen recall state per supported app (drives the row badge). */
-data class ActivePatchSource(
-    val id: String,
-    val name: String,
-    val resolvedVersion: String?,
-)
-
-data class BundleSupport(
-    val app: SupportedApp?,
-    val missing: List<Pair<String, String>>,
-    val isCurrent: Boolean,
-)
-
-data class BundleRelease(
-    val tag: String,
-    val isDev: Boolean,
-)
-
-sealed interface BundleChoice {
-    data class Version(val tag: String) : BundleChoice
-
-    data class LocalFile(val path: String) : BundleChoice
-}
-
 enum class PatchedAppState {
     NEVER_PATCHED,
     PATCHED,
@@ -1479,10 +1318,7 @@ data class RecallUpdateInfo(
         val latestAvailableVersion: String?,
         /** True when [latestAvailableVersion] is newer than [usedVersion]. */
         val outdated: Boolean,
-        val hasRelevantChanges: Boolean = false,
     )
-
-    val patchesChanged: Boolean get() = sources.any { it.hasRelevantChanges }
 
     enum class AppChannel { STABLE, EXPERIMENTAL, UNKNOWN }
 }
