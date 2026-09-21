@@ -44,12 +44,4 @@
         <item quantity="one">%1$d টি প্যাচ</item>
         <item quantity="other">%1$d টি প্যাচ</item>
     </plurals>
-    <plurals name="settings_app_cards_override_count">
-        <item quantity="one">%1$d কার্ড এটি ওভাররাইড করে</item>
-        <item quantity="other">%1$d কার্ড এটি ওভাররাইড করে</item>
-    </plurals>
-    <plurals name="home_detail_download_bundles">
-        <item quantity="one">%1$d বান্ডল ডাউনলোড করুন</item>
-        <item quantity="other">%1$d বান্ডল ডাউনলোড করুন</item>
-    </plurals>
 </resources>

@@ -44,12 +44,4 @@
         <item quantity="one">%1$d verandering</item>
         <item quantity="other">%1$d veranderinge</item>
     </plurals>
-    <plurals name="settings_app_cards_override_count">
-        <item quantity="one">%1$d kaart het voorrang oor hierdie</item>
-        <item quantity="other">%1$d kaarte het voorrang oor hierdie</item>
-    </plurals>
-    <plurals name="home_detail_download_bundles">
-        <item quantity="one">Laai %1$d bondel af</item>
-        <item quantity="other">Laai %1$d bondels af</item>
-    </plurals>
 </resources>

@@ -88,20 +88,4 @@
         <item quantity="many">%1$d تعديل</item>
         <item quantity="other">%1$d تعديل</item>
     </plurals>
-    <plurals name="settings_app_cards_override_count">
-        <item quantity="zero">%1$d بطاقةً تتجاوز هذا</item>
-        <item quantity="one">%1$d بطاقة تتجاوز هذا</item>
-        <item quantity="two">%1$d بطاقتين تتجاوزان هذا</item>
-        <item quantity="few">%1$d بطاقات تتجاوز هذا</item>
-        <item quantity="many">%1$d بطاقةً تتجاوز هذا</item>
-        <item quantity="other">%1$d بطاقةً تتجاوز هذا</item>
-    </plurals>
-    <plurals name="home_detail_download_bundles">
-        <item quantity="zero">تنزيل %1$d حزمةً</item>
-        <item quantity="one">تنزيل %1$d حزمة</item>
-        <item quantity="two">تنزيل %1$d حزمتين</item>
-        <item quantity="few">تنزيل %1$d حزم</item>
-        <item quantity="many">تنزيل %1$d حزمةً</item>
-        <item quantity="other">تنزيل %1$d حزمةً</item>
-    </plurals>
 </resources>

@@ -26,8 +26,6 @@
     <!-- Home Screen - SupportedAppListRow -->
     <!-- Home Screen - SupportedAppsListPane -->
     <!-- Home Screen - YourAppsPane -->
-    <string name="home_detail_details_title">ព័ត៌មានលម្អិត</string>
-    <string name="home_detail_section_options">ជម្រើស</string>
     <!-- Patches Screen -->
     <!-- Patch Selection Screen -->
     <string name="patch_selection_option_enabled">បានបើក</string>

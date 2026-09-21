@@ -50,8 +50,6 @@
     <string name="home_sort_recommended">پێشنیازکراو</string>
     <!-- Home Screen - YourAppsPane -->
     <string name="home_your_apps_status_patched">پینەکراو</string>
-    <string name="home_detail_details_title">وردەکاری</string>
-    <string name="home_detail_section_options">هەڵبژاردەکان</string>
     <!-- Patches Screen -->
     <!-- Patch Selection Screen -->
     <string name="patch_selection_no_patches_found">هیچ پینەیەک نەدۆزرایەوە</string>

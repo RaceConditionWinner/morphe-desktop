@@ -44,12 +44,4 @@
         <item quantity="one">%1$d na-patch</item>
         <item quantity="other">%1$d mga na-patch</item>
     </plurals>
-    <plurals name="settings_app_cards_override_count">
-        <item quantity="one">%1$d na card ang nag-o-override dito</item>
-        <item quantity="other">%1$d na card ang nag-o-override dito</item>
-    </plurals>
-    <plurals name="home_detail_download_bundles">
-        <item quantity="one">I-download ang %1$d na bundle</item>
-        <item quantity="other">I-download ang %1$d na bundle</item>
-    </plurals>
 </resources>

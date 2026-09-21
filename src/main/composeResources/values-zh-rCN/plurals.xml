@@ -33,10 +33,4 @@
     <plurals name="patch_selection_group_patch_count">
         <item quantity="other">%1$d 个补丁</item>
     </plurals>
-    <plurals name="settings_app_cards_override_count">
-        <item quantity="other">有 %1$d 张卡片会覆盖此设置</item>
-    </plurals>
-    <plurals name="home_detail_download_bundles">
-        <item quantity="other">下载 %1$d 个补丁包</item>
-    </plurals>
 </resources>

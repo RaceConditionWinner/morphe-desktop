@@ -44,12 +44,4 @@
         <item quantity="one">%1$d módosítás</item>
         <item quantity="other">%1$d módosítás</item>
     </plurals>
-    <plurals name="settings_app_cards_override_count">
-        <item quantity="one">%1$d kártya felülírja ezt</item>
-        <item quantity="other">%1$d kártya felülírja ezt</item>
-    </plurals>
-    <plurals name="home_detail_download_bundles">
-        <item quantity="one">%1$d csomag letöltése</item>
-        <item quantity="other">%1$d csomag letöltése</item>
-    </plurals>
 </resources>

@@ -33,10 +33,4 @@
     <plurals name="patch_selection_group_patch_count">
         <item quantity="other">%1$d 個のパッチ</item>
     </plurals>
-    <plurals name="settings_app_cards_override_count">
-        <item quantity="other">この設定を上書きするカードが%1$d枚あります</item>
-    </plurals>
-    <plurals name="home_detail_download_bundles">
-        <item quantity="other">バンドルを%1$d個ダウンロード</item>
-    </plurals>
 </resources>

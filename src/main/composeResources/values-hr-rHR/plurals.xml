@@ -55,14 +55,4 @@
         <item quantity="few">%1$d patcheva </item>
         <item quantity="other">%1$d patcheva </item>
     </plurals>
-    <plurals name="settings_app_cards_override_count">
-        <item quantity="one">%1$d kartica nadjačava ovo</item>
-        <item quantity="few">%1$d kartice nadjačavaju ovo</item>
-        <item quantity="other">%1$d kartica nadjačava ovo</item>
-    </plurals>
-    <plurals name="home_detail_download_bundles">
-        <item quantity="one">Preuzmi %1$d paket</item>
-        <item quantity="few">Preuzmi %1$d paketa</item>
-        <item quantity="other">Preuzmi %1$d paketa</item>
-    </plurals>
 </resources>

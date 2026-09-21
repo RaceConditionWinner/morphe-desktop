@@ -55,14 +55,4 @@
         <item quantity="two">%1$d תיקונים</item>
         <item quantity="other">%1$d תיקונים</item>
     </plurals>
-    <plurals name="settings_app_cards_override_count">
-        <item quantity="one">%1$d כרטיס עוקף את זה</item>
-        <item quantity="two">%1$d כרטיסים עוקפים את זה</item>
-        <item quantity="other">%1$d כרטיסים עוקפים את זה</item>
-    </plurals>
-    <plurals name="home_detail_download_bundles">
-        <item quantity="one">הורד %1$d חבילה</item>
-        <item quantity="two">הורד %1$d חבילות</item>
-        <item quantity="other">הורד %1$d חבילות</item>
-    </plurals>
 </resources>

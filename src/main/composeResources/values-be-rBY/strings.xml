@@ -26,7 +26,6 @@
     <string name="home_sort_updates_first">Спачатку абнаўленні патчаў</string>
     <!-- Home Screen - YourAppsPane -->
     <string name="home_filter_all_apps">Усе праграмы</string>
-    <string name="home_detail_patch_bundle_label">Пакет патчаў</string>
     <!-- Patches Screen -->
     <!-- Patch Selection Screen -->
     <string name="patch_selection_option_enabled">Уключана</string>

@@ -33,10 +33,4 @@
     <plurals name="patch_selection_group_patch_count">
         <item quantity="other">%1$d bản vá</item>
     </plurals>
-    <plurals name="settings_app_cards_override_count">
-        <item quantity="other">%1$d thẻ ghi đè cái này</item>
-    </plurals>
-    <plurals name="home_detail_download_bundles">
-        <item quantity="other">Tải xuống %1$d gói</item>
-    </plurals>
 </resources>

@@ -66,16 +66,4 @@
         <item quantity="few">%1$d Popravkih</item>
         <item quantity="other">%1$d Popravkih</item>
     </plurals>
-    <plurals name="settings_app_cards_override_count">
-        <item quantity="one">%1$d kartica to preglasi</item>
-        <item quantity="two">%1$d kartici to preglasita</item>
-        <item quantity="few">%1$d kartice to preglasijo</item>
-        <item quantity="other">%1$d kartic to preglasi</item>
-    </plurals>
-    <plurals name="home_detail_download_bundles">
-        <item quantity="one">Prenesi %1$d paket</item>
-        <item quantity="two">Prenesi %1$d paketa</item>
-        <item quantity="few">Prenesi %1$d pakete</item>
-        <item quantity="other">Prenesi %1$d paketov</item>
-    </plurals>
 </resources>

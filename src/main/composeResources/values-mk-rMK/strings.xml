@@ -27,8 +27,6 @@
     <!-- Home Screen - SupportedAppListRow -->
     <!-- Home Screen - SupportedAppsListPane -->
     <!-- Home Screen - YourAppsPane -->
-    <string name="home_detail_details_title">Детали</string>
-    <string name="home_detail_section_options">Options</string>
     <!-- Patches Screen -->
     <!-- Patch Selection Screen -->
     <string name="patch_selection_option_enabled">Овозможено</string>

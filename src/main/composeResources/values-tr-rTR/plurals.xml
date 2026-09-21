@@ -44,12 +44,4 @@
         <item quantity="one">%1$d yama</item>
         <item quantity="other">%1$d yama</item>
     </plurals>
-    <plurals name="settings_app_cards_override_count">
-        <item quantity="one">Bu ayarı %1$d kart geçersiz kılıyor</item>
-        <item quantity="other">Bu ayarı %1$d kart geçersiz kılıyor</item>
-    </plurals>
-    <plurals name="home_detail_download_bundles">
-        <item quantity="one">%1$d paket indir</item>
-        <item quantity="other">%1$d paket indir</item>
-    </plurals>
 </resources>

@@ -44,12 +44,4 @@
         <item quantity="one">%1$d пач</item>
         <item quantity="other">%1$d пачове</item>
     </plurals>
-    <plurals name="settings_app_cards_override_count">
-        <item quantity="one">%1$d карта заменя това</item>
-        <item quantity="other">%1$d карти заменят това</item>
-    </plurals>
-    <plurals name="home_detail_download_bundles">
-        <item quantity="one">Изтегли %1$d пакет</item>
-        <item quantity="other">Изтегли %1$d пакета</item>
-    </plurals>
 </resources>

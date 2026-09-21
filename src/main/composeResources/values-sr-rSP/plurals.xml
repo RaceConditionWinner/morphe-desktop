@@ -55,14 +55,4 @@
         <item quantity="few">%1$d исправка</item>
         <item quantity="other">%1$d исправка</item>
     </plurals>
-    <plurals name="settings_app_cards_override_count">
-        <item quantity="one">%1$d картица има предност над овим</item>
-        <item quantity="few">%1$d картице имају предност над овим</item>
-        <item quantity="other">%1$d картица има предност над овим</item>
-    </plurals>
-    <plurals name="home_detail_download_bundles">
-        <item quantity="one">Преузми %1$d пакет</item>
-        <item quantity="few">Преузми %1$d пакета</item>
-        <item quantity="other">Преузми %1$d пакета</item>
-    </plurals>
 </resources>

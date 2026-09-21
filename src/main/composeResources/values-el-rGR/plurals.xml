@@ -44,12 +44,4 @@
         <item quantity="one">%1$d τροποποίηση</item>
         <item quantity="other">%1$d τροποποιήσεις</item>
     </plurals>
-    <plurals name="settings_app_cards_override_count">
-        <item quantity="one">%1$d κάρτα το παρακάμπτει</item>
-        <item quantity="other">%1$d κάρτες το παρακάμπτουν</item>
-    </plurals>
-    <plurals name="home_detail_download_bundles">
-        <item quantity="one">Λήψη %1$d πακέτου</item>
-        <item quantity="other">Λήψη %1$d πακέτων</item>
-    </plurals>
 </resources>

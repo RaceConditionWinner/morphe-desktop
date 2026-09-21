@@ -77,18 +77,4 @@
         <item quantity="many">%1$d paistí</item>
         <item quantity="other">%1$d paistí</item>
     </plurals>
-    <plurals name="settings_app_cards_override_count">
-        <item quantity="one">Sáraíonn %1$d chárta é seo</item>
-        <item quantity="two">Sáraíonn %1$d chárta é seo</item>
-        <item quantity="few">Sáraíonn %1$d cártaí é seo</item>
-        <item quantity="many">Sáraíonn %1$d cártaí é seo</item>
-        <item quantity="other">Sáraíonn %1$d cártaí é seo</item>
-    </plurals>
-    <plurals name="home_detail_download_bundles">
-        <item quantity="one">Íoslódáil %1$d bheartán</item>
-        <item quantity="two">Íoslódáil %1$d bheartán</item>
-        <item quantity="few">Íoslódáil %1$d beartáin</item>
-        <item quantity="many">Íoslódáil %1$d beartáin</item>
-        <item quantity="other">Íoslódáil %1$d beartáin</item>
-    </plurals>
 </resources>

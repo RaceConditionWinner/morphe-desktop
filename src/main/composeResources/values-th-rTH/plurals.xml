@@ -33,10 +33,4 @@
     <plurals name="patch_selection_group_patch_count">
         <item quantity="other">%1$d แพตซ์</item>
     </plurals>
-    <plurals name="settings_app_cards_override_count">
-        <item quantity="other">การ์ด %1$d ใบแทนที่การตั้งค่านี้</item>
-    </plurals>
-    <plurals name="home_detail_download_bundles">
-        <item quantity="other">ดาวน์โหลด %1$d ชุด</item>
-    </plurals>
 </resources>

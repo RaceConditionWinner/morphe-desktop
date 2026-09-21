@@ -44,12 +44,4 @@
         <item quantity="one">%1$d modifica</item>
         <item quantity="other">%1$d modifiche</item>
     </plurals>
-    <plurals name="settings_app_cards_override_count">
-        <item quantity="one">%1$d scheda ha la precedenza su questa impostazione</item>
-        <item quantity="other">%1$d schede hanno la precedenza su questa impostazione</item>
-    </plurals>
-    <plurals name="home_detail_download_bundles">
-        <item quantity="one">Scarica %1$d bundle</item>
-        <item quantity="other">Scarica %1$d bundle</item>
-    </plurals>
 </resources>

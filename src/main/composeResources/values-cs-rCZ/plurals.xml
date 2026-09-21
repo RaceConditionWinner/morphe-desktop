@@ -66,16 +66,4 @@
         <item quantity="many">%1$d záplat</item>
         <item quantity="other">%1$d záplaty</item>
     </plurals>
-    <plurals name="settings_app_cards_override_count">
-        <item quantity="one">%1$d karta přepisuje toto nastavení</item>
-        <item quantity="few">%1$d karty přepisují toto nastavení</item>
-        <item quantity="many">%1$d karet přepisuje toto nastavení</item>
-        <item quantity="other">%1$d karet přepisuje toto nastavení</item>
-    </plurals>
-    <plurals name="home_detail_download_bundles">
-        <item quantity="one">Stáhnout %1$d balíček</item>
-        <item quantity="few">Stáhnout %1$d balíčky</item>
-        <item quantity="many">Stáhnout %1$d balíčků</item>
-        <item quantity="other">Stáhnout %1$d balíčků</item>
-    </plurals>
 </resources>

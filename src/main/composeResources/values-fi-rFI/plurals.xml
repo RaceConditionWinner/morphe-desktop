@@ -44,12 +44,4 @@
         <item quantity="one">%1$d lisäosa</item>
         <item quantity="other">%1$d lisäosaa</item>
     </plurals>
-    <plurals name="settings_app_cards_override_count">
-        <item quantity="one">%1$d kortti ohittaa tämän</item>
-        <item quantity="other">%1$d korttia ohittaa tämän</item>
-    </plurals>
-    <plurals name="home_detail_download_bundles">
-        <item quantity="one">Lataa %1$d paketti</item>
-        <item quantity="other">Lataa %1$d pakettia</item>
-    </plurals>
 </resources>

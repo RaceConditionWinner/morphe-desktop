@@ -66,16 +66,4 @@
         <item quantity="many">%1$d патчи</item>
         <item quantity="other">%1$d патчи</item>
     </plurals>
-    <plurals name="settings_app_cards_override_count">
-        <item quantity="one">%1$d карточка переопределяет это</item>
-        <item quantity="few">%1$d карточки переопределяют это</item>
-        <item quantity="many">%1$d карточек переопределяют это</item>
-        <item quantity="other">%1$d карточки переопределяют это</item>
-    </plurals>
-    <plurals name="home_detail_download_bundles">
-        <item quantity="one">Скачать %1$d пакет</item>
-        <item quantity="few">Скачать %1$d пакета</item>
-        <item quantity="many">Скачать %1$d пакетов</item>
-        <item quantity="other">Скачать %1$d пакета</item>
-    </plurals>
 </resources>

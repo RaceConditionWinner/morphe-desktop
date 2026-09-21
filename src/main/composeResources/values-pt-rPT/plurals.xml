@@ -44,12 +44,4 @@
         <item quantity="one">%1$d remendo</item>
         <item quantity="other">%1$d patches</item>
     </plurals>
-    <plurals name="settings_app_cards_override_count">
-        <item quantity="one">%1$d card sobrepõe-se a isto</item>
-        <item quantity="other">%1$d cards sobrepõem-se a isto</item>
-    </plurals>
-    <plurals name="home_detail_download_bundles">
-        <item quantity="one">Baixar %1$d pacote</item>
-        <item quantity="other">Baixar %1$d pacotes</item>
-    </plurals>
 </resources>

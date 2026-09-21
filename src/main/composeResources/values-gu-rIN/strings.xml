@@ -29,7 +29,6 @@
     <!-- Home Screen - SupportedAppsListPane -->
     <!-- Home Screen - YourAppsPane -->
     <string name="home_action_installing">ઇન્સ્ટોલ કરી રહ્યું છે...</string>
-    <string name="home_detail_patch_bundle_label">પેચ બંડલ</string>
     <!-- Patches Screen -->
     <!-- Patch Selection Screen -->
     <string name="patch_selection_group_selected_count">%1$d પસંદ કરેલ</string>

@@ -51,7 +51,6 @@
     <!-- Home Screen - YourAppsPane -->
     <string name="home_filter_all_apps">Semua aplikasi</string>
     <string name="home_action_installing">Memasang…</string>
-    <string name="home_detail_patch_bundle_label">Tampal Pekej</string>
     <!-- Patches Screen -->
     <string name="patches_dialog_error_title">Ralat</string>
     <string name="patches_refresh_description">Segar semula</string>

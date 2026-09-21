@@ -44,12 +44,4 @@
         <item quantity="one">%1$d tillägg</item>
         <item quantity="other">%1$d tillägg</item>
     </plurals>
-    <plurals name="settings_app_cards_override_count">
-        <item quantity="one">%1$d kort åsidosätter detta</item>
-        <item quantity="other">%1$d kort åsidosätter detta</item>
-    </plurals>
-    <plurals name="home_detail_download_bundles">
-        <item quantity="one">Ladda ner %1$d paket</item>
-        <item quantity="other">Ladda ner %1$d paket</item>
-    </plurals>
 </resources>

@@ -44,12 +44,4 @@
         <item quantity="one">%1$d plástur</item>
         <item quantity="other">%1$d plástrar</item>
     </plurals>
-    <plurals name="settings_app_cards_override_count">
-        <item quantity="one">%1$d kort yfirskrifar þetta</item>
-        <item quantity="other">%1$d kort yfirskrifa þetta</item>
-    </plurals>
-    <plurals name="home_detail_download_bundles">
-        <item quantity="one">Sækja %1$d búnt</item>
-        <item quantity="other">Sækja %1$d búnt</item>
-    </plurals>
 </resources>

@@ -44,12 +44,4 @@
         <item quantity="one">%1$d patch</item>
         <item quantity="other">%1$d patcher</item>
     </plurals>
-    <plurals name="settings_app_cards_override_count">
-        <item quantity="one">%1$d kort overstyrer dette</item>
-        <item quantity="other">%1$d kort overstyrer dette</item>
-    </plurals>
-    <plurals name="home_detail_download_bundles">
-        <item quantity="one">Last ned %1$d pakke</item>
-        <item quantity="other">Last ned %1$d pakker</item>
-    </plurals>
 </resources>

@@ -33,10 +33,4 @@
     <plurals name="patch_selection_group_patch_count">
         <item quantity="other">%1$d 개의 패치</item>
     </plurals>
-    <plurals name="settings_app_cards_override_count">
-        <item quantity="other">카드 %1$d개가 이 설정을 재정의합니다</item>
-    </plurals>
-    <plurals name="home_detail_download_bundles">
-        <item quantity="other">번들 %1$d개 다운로드</item>
-    </plurals>
 </resources>

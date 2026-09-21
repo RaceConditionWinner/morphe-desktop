@@ -44,12 +44,4 @@
         <item quantity="one">%1$d patch</item>
         <item quantity="other">%1$d patchs</item>
     </plurals>
-    <plurals name="settings_app_cards_override_count">
-        <item quantity="one">%1$d carte remplace celle-ci</item>
-        <item quantity="other">​%1$d cartes remplacent celle-ci</item>
-    </plurals>
-    <plurals name="home_detail_download_bundles">
-        <item quantity="one">Télécharger %1$d bundle</item>
-        <item quantity="other">Télécharger %1$d bundles</item>
-    </plurals>
 </resources>
