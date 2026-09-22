@@ -6,6 +6,7 @@
 package app.morphe.gui.util
 
 import app.morphe.engine.model.PatchedAppRecord
+import app.morphe.engine.util.FileChecksum
 import java.io.File
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -86,23 +87,26 @@ internal fun resolveDeviceInstallState(
     !packageInstalled -> DeviceInstallState.NOT_INSTALLED
 
     // Patching signs with Morphe's own keystore, so the certificate identifies the
-    // build whatever the package is called and whatever version it reports
+    // build whatever the package is called and whatever version it reports. This
+    // is the only signal strong enough to call a build definitely ours — nothing
+    // else below reaches INSTALLED.
     deviceSignatureId != null && deviceSignatureId in morpheSignatureIds -> DeviceInstallState.INSTALLED
 
     // A certificate we could read that is none of ours belongs to another build
     deviceSignatureId != null && morpheSignatureIds.isNotEmpty() -> DeviceInstallState.REPLACED
 
-    // No certificate to compare. Morphe credits its own installs to a store that
-    // is not on the device, which nothing else would have done
-    installerPackage != null && installerPackage in morpheInstallers -> DeviceInstallState.INSTALLED
+    // No certificate to compare. A package that only appeared after the patch,
+    // credited to an installer Morphe would not have used, was not installed by
+    // Morphe — timing plus a foreign installer is negative evidence worth acting
+    // on, even without a certificate to confirm it outright.
+    installedAfterPatching && installerPackage !in morpheInstallers -> DeviceInstallState.REPLACED
 
-    // Nothing above matched, so whatever installed this is not something Morphe
-    // would have credited. A package that only appeared after the patch is then
-    // somebody else's installation rather than an unreadable one of ours.
-    installedAfterPatching -> DeviceInstallState.REPLACED
-
-    // A comparison was possible in principle, so say the check did not happen
-    // rather than imply it passed
+    // Nothing below this line is proof of anything. In particular, the installer
+    // merely being one Morphe *could* plausibly have used is not evidence it
+    // *did* — several real installers overlap that candidate set for reasons
+    // that have nothing to do with Morphe, and treating membership in it as
+    // identity is exactly the false positive a conservative resolver avoids.
+    // Ambiguous evidence stays ambiguous rather than being read as a match.
     else -> DeviceInstallState.UNVERIFIED
 }
 
@@ -114,12 +118,18 @@ internal fun resolveDeviceInstallState(
 internal fun installedAfterPatching(firstInstallTime: Long?, patchedAt: Long): Boolean =
     firstInstallTime != null && firstInstallTime > patchedAt + INSTALL_TIME_TOLERANCE_MS
 
-/** Whether the patched APK at [path] is still the file [record] describes. */
+/**
+ * Whether the patched APK at [path] is still the file [record] describes, using
+ * only what a `stat()` can say: a missing file, or one whose size no longer
+ * matches. A size match is reported as [PatchedArtifactState.PRESENT] here even
+ * though a same-size overwrite is possible and this alone cannot rule it out —
+ * [TrackedInstallResolver.verifyArtifact] is what layers a cached SHA-256 check
+ * on top for that case. This function stays hash-free and pure so the cheap,
+ * common-case answer (missing or plainly resized) never costs an I/O read, and
+ * so it stays trivially unit-testable without a filesystem fixture per case.
+ */
 internal fun resolveArtifactState(path: File, recordedSize: Long): PatchedArtifactState = when {
     !path.exists() -> PatchedArtifactState.MISSING
-    // A re-signed or rebuilt APK changes size. The recorded sha256 stays the
-    // certain answer, but hashing every record on every refresh is not something
-    // the home screen can afford, so size is the signal here.
     recordedSize > 0 && path.length() != recordedSize -> PatchedArtifactState.MODIFIED
     else -> PatchedArtifactState.PRESENT
 }
@@ -143,6 +153,17 @@ data class TrackedInstallSnapshot(
 }
 
 /**
+ * How long a resolved verdict is trusted before being re-checked even if
+ * nothing locally observable about it changed. Most refreshes already force a
+ * fresh read (device changes, installs, uninstalls, screen re-entry all call
+ * [TrackedInstallResolver.invalidateAll]); this TTL is the backstop for the
+ * one path that doesn't — an external reinstall under a package name and
+ * output file that otherwise look untouched — so state still converges
+ * without depending on the user taking an action first.
+ */
+private const val CACHE_TTL_MS = 20_000L
+
+/**
  * Resolves the device- and disk-side state of every tracked record in one pass.
  *
  * Repeated refreshes for an unchanged app are answered from the previous result:
@@ -153,9 +174,20 @@ data class TrackedInstallSnapshot(
 class TrackedInstallResolver(
     private val adbManager: AdbManager,
 ) {
-    private data class Cached(val fingerprint: String, val install: TrackedInstall)
+    private data class Cached(val fingerprint: String, val install: TrackedInstall, val resolvedAtMs: Long)
 
     private val cache = HashMap<String, Cached>()
+
+    /**
+     * A hash verified against the (size, mtime) it was verified at, so an
+     * unchanged file is never rehashed. Kept separate from [cache]: the saved
+     * APK's own identity doesn't change on a device event, so this survives
+     * [invalidate] and [invalidateAll] — only a real edit to the file (which
+     * changes its size or mtime in virtually every real case) invalidates it.
+     */
+    private data class ArtifactVerification(val size: Long, val mtime: Long, val matches: Boolean)
+
+    private val artifactCache = HashMap<String, ArtifactVerification>()
 
     /**
      * Resolves [records] against [deviceId], or against no device at all when it
@@ -186,7 +218,12 @@ class TrackedInstallResolver(
             val devicePackage = record.installedPackageName
             val packageInstalled = installedPackages?.contains(devicePackage) == true
             val fingerprint = fingerprint(record, deviceId, packageInstalled, output, signatureKey)
-            val hit = synchronized(cache) { cache[record.trackingKey]?.takeIf { it.fingerprint == fingerprint } }
+            val now = System.currentTimeMillis()
+            val hit = synchronized(cache) {
+                cache[record.trackingKey]?.takeIf {
+                    it.fingerprint == fingerprint && now - it.resolvedAtMs < CACHE_TTL_MS
+                }
+            }
             if (hit != null) {
                 resolved[record.trackingKey] = hit.install
                 continue
@@ -218,16 +255,17 @@ class TrackedInstallResolver(
                         patchedAt = record.patchedAt,
                     ),
                 ),
-                artifactState = resolveArtifactState(output, record.outputApkSize),
+                artifactState = verifyArtifact(record, output),
                 deviceVersion = devicePackageInfo?.versionName,
                 deviceApkPath = devicePackageInfo?.apkPath,
             )
-            synchronized(cache) { cache[record.trackingKey] = Cached(fingerprint, install) }
+            synchronized(cache) { cache[record.trackingKey] = Cached(fingerprint, install, now) }
             resolved[record.trackingKey] = install
         }
 
         // Records that left the history have no verdict to keep warm
         synchronized(cache) { cache.keys.retainAll(resolved.keys) }
+        synchronized(artifactCache) { artifactCache.keys.retainAll(resolved.keys) }
         TrackedInstallSnapshot(
             deviceAttached = attached,
             installedPackages = installedPackages.orEmpty(),
@@ -243,6 +281,52 @@ class TrackedInstallResolver(
     /** Drops every remembered verdict, e.g. after an install or uninstall. */
     fun invalidateAll() {
         synchronized(cache) { cache.clear() }
+    }
+
+    /**
+     * [PatchedArtifactState] of the patched APK Morphe wrote for [record], verified
+     * by content rather than by size alone whenever a size match makes that the
+     * only way to be sure: a same-size overwrite is not the same thing as an
+     * unchanged file, and [resolveArtifactState] on its own cannot tell those apart.
+     *
+     * Hashing is the expensive part, so it happens at most once per (size, mtime)
+     * pair per record — every further call reads the verdict back from
+     * [artifactCache] as long as neither has changed since, and a real edit
+     * changes at least one of them on virtually every real filesystem. A record
+     * with no stored hash (written before [PatchedAppRecord.outputApkSha256]
+     * existed) is left at whatever [resolveArtifactState] alone can say, exactly
+     * as it always was.
+     */
+    internal fun verifyArtifact(record: PatchedAppRecord, file: File): PatchedArtifactState {
+        val bySize = resolveArtifactState(file, record.outputApkSize)
+        if (bySize != PatchedArtifactState.PRESENT) return bySize
+
+        val expectedHash = record.outputApkSha256 ?: return PatchedArtifactState.PRESENT
+
+        val size = file.length()
+        val mtime = file.lastModified()
+        synchronized(artifactCache) {
+            artifactCache[record.trackingKey]?.let { cached ->
+                if (cached.size == size && cached.mtime == mtime) {
+                    return if (cached.matches) PatchedArtifactState.PRESENT else PatchedArtifactState.MODIFIED
+                }
+            }
+        }
+
+        val matches = try {
+            FileChecksum.sha256(file).equals(expectedHash, ignoreCase = true)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // Couldn't read it to be sure either way — the size already matched,
+            // which is the most that can be said without a working hash
+            Logger.debug("Could not hash ${file.name} to verify it (${e.message}); trusting the size match")
+            return PatchedArtifactState.PRESENT
+        }
+        synchronized(artifactCache) {
+            artifactCache[record.trackingKey] = ArtifactVerification(size, mtime, matches)
+        }
+        return if (matches) PatchedArtifactState.PRESENT else PatchedArtifactState.MODIFIED
     }
 
     /**
