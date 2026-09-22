@@ -83,14 +83,19 @@ class AppCardColorResolverTest {
 
     @Test
     fun `middle and end shade away from the bundle color so the gradient does not read flat`() {
+        // A genuinely light bundle color (its real luminance, not just how vivid it looks, is
+        // what requiresLightContent() reads) so this exercises the darkening branch of
+        // bundleShade(). #FF4500 looks bright but is actually dark by that measure — it belongs
+        // to the lightening branch, which the sibling "dark bundle color" test below covers.
+        val lightBundle = listOf(Color(0xFFFFC400), AppCardColorDefaults.GRADIENT_MID, AppCardColorDefaults.GRADIENT_END)
         val values = AppCardColorValues(startHex = BUNDLE, middleHex = BUNDLE, endHex = BUNDLE)
-        val resolved = resolver(AppCardColorMode.GRADIENT, values)!!.resolve(RedditBundle)
+        val resolved = resolver(AppCardColorMode.GRADIENT, values)!!.resolve(lightBundle)
 
-        assertEquals(RedditBundle[0], resolved[0])
+        assertEquals(lightBundle[0], resolved[0])
         assertNotEquals(resolved[0], resolved[1])
         assertNotEquals(resolved[1], resolved[2])
 
-        // Reddit's orange is light enough to want dark content, so its stops darken
+        // Light enough to want dark content, so its stops darken
         assertTrue(resolved[1].luminanceOf() < resolved[0].luminanceOf())
         assertTrue(resolved[2].luminanceOf() < resolved[1].luminanceOf())
     }

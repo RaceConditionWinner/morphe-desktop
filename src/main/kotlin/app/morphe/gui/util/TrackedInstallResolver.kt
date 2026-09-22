@@ -192,10 +192,15 @@ class TrackedInstallResolver(
                 continue
             }
 
-            val devicePackageInfo = if (packageInstalled && deviceId != null) {
-                runCatching { adbManager.getDevicePackageInfo(deviceId, devicePackage) }
-                    .onFailure { if (it is CancellationException) throw it }
-                    .getOrNull()
+            // packageInstalled is only ever true when deviceId is non-null (installedPackages is
+            // only non-null via deviceId?.let{} above), so deviceId?.let{} both establishes the
+            // smart-cast this needs and avoids asserting a redundant, compiler-provable check.
+            val devicePackageInfo = if (packageInstalled) {
+                deviceId?.let { id ->
+                    runCatching { adbManager.getDevicePackageInfo(id, devicePackage) }
+                        .onFailure { if (it is CancellationException) throw it }
+                        .getOrNull()
+                }
             } else {
                 null
             }
