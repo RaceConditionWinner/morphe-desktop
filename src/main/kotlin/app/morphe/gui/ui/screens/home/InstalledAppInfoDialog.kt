@@ -100,6 +100,7 @@ import app.morphe.gui.ui.theme.LocalMorpheAccents
 import app.morphe.gui.ui.theme.LocalMorpheCorners
 import app.morphe.gui.ui.theme.LocalMorpheFont
 import app.morphe.gui.ui.theme.LocalMorpheMono
+import app.morphe.gui.ui.theme.MorpheOutline
 import app.morphe.gui.util.ChangelogEntry
 import app.morphe.gui.util.ChangelogParser
 import app.morphe.gui.util.DeviceInstallState
@@ -160,8 +161,8 @@ fun InstalledAppInfoDialog(
     var appliedPatchesOpen by remember(item.id) { mutableStateOf(false) }
     var changelogSourceId by remember(item.id) { mutableStateOf<String?>(null) }
 
-    val visibleState = remember { MutableTransitionState(false).apply { targetState = true } }
-    var entered by remember { mutableStateOf(false) }
+    val visibleState = remember(item.id) { MutableTransitionState(false).apply { targetState = true } }
+    var entered by remember(item.id) { mutableStateOf(false) }
     LaunchedEffect(item.id) { entered = true }
 
     // Rebuilding is offered by a banner whenever there is a reason to rebuild, so
@@ -217,7 +218,7 @@ fun InstalledAppInfoDialog(
                         )
 
                         VerticalDivider(
-                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f),
+                            color = MaterialTheme.colorScheme.outline.copy(alpha = MorpheOutline.hairlineAlpha),
                             modifier = Modifier.fillMaxHeight(),
                         )
 
@@ -322,7 +323,7 @@ private fun ActionRail(
     onToggleHidden: () -> Unit,
 ) {
     val font = LocalMorpheFont.current
-    val outline = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+    val outline = MaterialTheme.colorScheme.outline.copy(alpha = MorpheOutline.accentBorderAlpha)
     val error = MaterialTheme.colorScheme.error
 
     val secondary = buildList {
@@ -414,7 +415,7 @@ private fun ActionRail(
                         label = action.label,
                         icon = action.icon,
                         font = font,
-                        borderColor = if (action.destructive) error.copy(alpha = 0.35f) else outline,
+                        borderColor = if (action.destructive) error.copy(alpha = MorpheOutline.accentBorderAlpha) else outline,
                         contentColor = if (action.destructive) error else MaterialTheme.colorScheme.onSurfaceVariant,
                         enabled = action.enabled,
                         onClick = action.onClick,
@@ -422,7 +423,7 @@ private fun ActionRail(
                 }
             }
         }
-        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
+        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = MorpheOutline.hairlineAlpha))
         Spacer(Modifier.height(10.dp))
         ActionButton(
             label = stringResource(Res.string.close),
@@ -445,7 +446,7 @@ private fun AppInfoHero(item: HomeAppItem, accent: Color) {
     val corners = LocalMorpheCorners.current
     val record = item.record
 
-    val heroFill = accent.copy(alpha = 0.15f)
+    val heroFill = accent.copy(alpha = MorpheOutline.accentFillAlpha)
     val onHero = MaterialTheme.colorScheme.onSurface
 
     Column(
@@ -453,7 +454,7 @@ private fun AppInfoHero(item: HomeAppItem, accent: Color) {
             .fillMaxWidth()
             .clip(RoundedCornerShape(corners.medium))
             .background(heroFill)
-            .border(1.dp, accent.copy(alpha = 0.25f), RoundedCornerShape(corners.medium))
+            .border(MorpheOutline.width, accent.copy(alpha = MorpheOutline.accentBorderAlpha), RoundedCornerShape(corners.medium))
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -546,13 +547,13 @@ private fun deviceChipLabel(item: HomeAppItem): String = when (item.deviceState)
 @Composable
 private fun HeroChip(text: String, accent: Color, icon: ImageVector) {
     val font = LocalMorpheFont.current
-    val fill = accent.copy(alpha = 0.18f)
+    val fill = accent.copy(alpha = MorpheOutline.accentFillAlpha)
     val ink = accent.readableOn(fill, MaterialTheme.colorScheme.surface)
     Row(
         modifier = Modifier
             .clip(RoundedCornerShape(999.dp))
             .background(fill)
-            .border(1.dp, accent.copy(alpha = 0.30f), RoundedCornerShape(999.dp))
+            .border(MorpheOutline.width, accent.copy(alpha = MorpheOutline.badgeBorderAlpha), RoundedCornerShape(999.dp))
             .padding(horizontal = 10.dp, vertical = 5.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(5.dp),
@@ -711,7 +712,7 @@ private fun AttentionBanner(
 ) {
     val font = LocalMorpheFont.current
     val corners = LocalMorpheCorners.current
-    val fill = tone.copy(alpha = 0.12f)
+    val fill = tone.copy(alpha = MorpheOutline.accentFillAlpha)
     val ink = tone.readableOn(fill, MaterialTheme.colorScheme.surface)
 
     Column(
@@ -719,7 +720,7 @@ private fun AttentionBanner(
             .fillMaxWidth()
             .clip(RoundedCornerShape(corners.medium))
             .background(fill)
-            .border(1.dp, tone.copy(alpha = 0.30f), RoundedCornerShape(corners.medium))
+            .border(MorpheOutline.width, tone.copy(alpha = MorpheOutline.accentBorderAlpha), RoundedCornerShape(corners.medium))
             .padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
@@ -766,7 +767,7 @@ private fun AttentionBanner(
                             label = action.label,
                             icon = action.icon,
                             font = font,
-                            borderColor = tone.copy(alpha = 0.30f),
+                            borderColor = tone.copy(alpha = MorpheOutline.accentBorderAlpha),
                             contentColor = ink,
                             onClick = action.onClick,
                         )
@@ -805,8 +806,8 @@ private fun Notice(icon: ImageVector, tone: Color, text: String) {
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(corners.medium))
-            .background(tone.copy(alpha = 0.10f))
-            .border(1.dp, tone.copy(alpha = 0.25f), RoundedCornerShape(corners.medium))
+            .background(tone.copy(alpha = MorpheOutline.accentFillAlpha))
+            .border(MorpheOutline.width, tone.copy(alpha = MorpheOutline.accentBorderAlpha), RoundedCornerShape(corners.medium))
             .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -836,7 +837,7 @@ private fun AppInfoSection(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(corners.medium))
-            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f), RoundedCornerShape(corners.medium))
+            .border(MorpheOutline.width, MaterialTheme.colorScheme.outline.copy(alpha = MorpheOutline.hairlineAlpha), RoundedCornerShape(corners.medium))
             .padding(vertical = 6.dp),
     ) {
         SectionLabel(stringResource(Res.string.installed_info_section_information), font)
@@ -889,7 +890,7 @@ private fun AppInfoSection(
 
         if (appliedBundles.isNotEmpty()) {
             HorizontalDivider(
-                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.10f),
+                color = MaterialTheme.colorScheme.outline.copy(alpha = MorpheOutline.hairlineAlpha),
                 modifier = Modifier.padding(vertical = 4.dp),
             )
             SectionLabel(stringResource(Res.string.installed_info_section_sources), font)
@@ -916,7 +917,7 @@ private fun AppInfoSection(
             }
 
             HorizontalDivider(
-                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.10f),
+                color = MaterialTheme.colorScheme.outline.copy(alpha = MorpheOutline.hairlineAlpha),
                 modifier = Modifier.padding(vertical = 4.dp),
             )
             InfoRow(
@@ -1123,7 +1124,7 @@ private fun AppliedPatchesDialog(
                         label = stringResource(Res.string.close),
                         icon = MorpheIcons.Close,
                         font = font,
-                        borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                        borderColor = MaterialTheme.colorScheme.outline.copy(alpha = MorpheOutline.accentBorderAlpha),
                         onClick = onDismiss,
                     )
                 }
@@ -1226,7 +1227,7 @@ private fun PatchSearchField(
                     .fillMaxWidth()
                     .height(34.dp)
                     .clip(RoundedCornerShape(corner))
-                    .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f), RoundedCornerShape(corner))
+                    .border(MorpheOutline.width, MaterialTheme.colorScheme.outline.copy(alpha = MorpheOutline.accentBorderAlpha), RoundedCornerShape(corner))
                     .padding(horizontal = 10.dp),
             ) {
                 Icon(
@@ -1363,7 +1364,7 @@ private fun BundleChangelogDialog(
                         label = stringResource(Res.string.close),
                         icon = MorpheIcons.Close,
                         font = font,
-                        borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                        borderColor = MaterialTheme.colorScheme.outline.copy(alpha = MorpheOutline.accentBorderAlpha),
                         onClick = onDismiss,
                     )
                 }

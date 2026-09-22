@@ -120,6 +120,37 @@ data class MorpheDimens(
 val LocalMorpheDimens = compositionLocalOf { MorpheDimens() }
 
 /**
+ * Shared alpha values for a border or fill drawn in a tone or accent color —
+ * a banner, a notice, a hero panel, a status chip — rather than in a flat
+ * Material color role, which already carries its own contrast from the
+ * color scheme and doesn't need one of these.
+ *
+ * One small set of numbers instead of every call site choosing its own alpha,
+ * so an accent-colored border or wash reads as the same weight of emphasis
+ * everywhere it appears, the way Manager's own recurring border/accent
+ * treatment does. [MorpheBadge]'s border already established 1dp width at
+ * 0.25 alpha for a chip; [badgeBorderAlpha] names that existing value rather
+ * than a new number for the same weight, and [accentBorderAlpha] is reached
+ * for instead when the surface is not chip-sized.
+ */
+object MorpheOutline {
+    /** Width of every hairline border drawn in a tone or accent color. */
+    val width: Dp = 1.dp
+
+    /** Border alpha over a tone/accent color: hero panels, banners, notices. */
+    const val accentBorderAlpha = 0.30f
+
+    /** Fill alpha over a tone/accent color, paired with [accentBorderAlpha]'s border. */
+    const val accentFillAlpha = 0.12f
+
+    /** Border alpha for a badge/chip-weight accent border — see [MorpheBadge]. */
+    const val badgeBorderAlpha = 0.25f
+
+    /** Alpha for a neutral hairline against `MaterialTheme.colorScheme.outline`. */
+    const val hairlineAlpha = 0.12f
+}
+
+/**
  * Fill for panels that sit over the animated background. Opaque, because motion
  * behind a panel reads through even a few percent of translucency.
  */
