@@ -78,6 +78,8 @@ fun SettingsDialog(
     onDisableStockLinksChange: (Boolean) -> Unit = {},
     collapsibleSectionStates: Map<String, Boolean> = emptyMap(),
     onCollapsibleSectionToggle: (id: String, expanded: Boolean) -> Unit = { _, _ -> },
+    gitHubPat: String = "",
+    onGitHubPatChange: (String) -> Unit = {},
     customAccentColorArgb: Int? = null,
     onCustomAccentColorChange: (Int?) -> Unit = {}
 ) {
@@ -215,6 +217,8 @@ fun SettingsDialog(
                                 onDeveloperOptionsChange = onDeveloperOptionsChange,
                                 collapsibleSectionStates = collapsibleSectionStates,
                                 onCollapsibleSectionToggle = onCollapsibleSectionToggle,
+                                gitHubPat = gitHubPat,
+                                onGitHubPatChange = onGitHubPatChange,
                                 isPatching = isPatching,
                                 borderColor = borderColor,
                             )

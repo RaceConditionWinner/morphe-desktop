@@ -31,7 +31,7 @@ import kotlinx.coroutines.withContext
  * convenience layer.
  */
 class PatchRepository(
-    private val remoteSource: RemotePatchSource,
+    val remoteSource: RemotePatchSource,
 ) {
     val repoPath: String get() = remoteSource.repoPath
 

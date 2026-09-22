@@ -354,6 +354,10 @@ class ChangelogRepository(
         return when (parsed.provider) {
             PatchProvider.GITHUB -> "$GITHUB_RAW_BASE/${parsed.repoPath}/$branch/$CHANGELOG_FILE"
             PatchProvider.GITLAB -> "$GITLAB_BASE/${parsed.repoPath}/-/raw/$branch/$CHANGELOG_FILE"
+            // A GitHub PR source has no repo branch of its own to read a CHANGELOG.md
+            // from (it resolves to a single workflow-run artifact) — same "no changelog"
+            // outcome as a local source's null sourceUrl above.
+            PatchProvider.GITHUB_PR -> null
         }
     }
 

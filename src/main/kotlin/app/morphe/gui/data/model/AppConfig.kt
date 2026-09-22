@@ -183,6 +183,12 @@ data class AppConfig(
     // replaced on a new version), and losing the ability to repatch without
     // re-locating the original file is a worse default than the disk cost.
     val saveOriginalApks: Boolean = true,
+    // GitHub Personal Access Token (public_repo scope) used to authenticate
+    // GitHub Actions artifact downloads for GitHub Pull Request patch sources.
+    // Falls back to the GITHUB_TOKEN/GH_TOKEN env vars on the CLI when blank.
+    // Default empty; unauthenticated requests are rate-limited but still work
+    // for public repos in most cases.
+    val gitHubPat: String = "",
 ) {
 
     fun getUpdateChannelPreference(): UpdateChannelPreference? {
