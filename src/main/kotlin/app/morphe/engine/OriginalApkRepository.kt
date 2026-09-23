@@ -233,6 +233,12 @@ class OriginalApkRepository(
      * 3. [PatchedAppRecord.inputApkPath] as a user-owned file: records written before that, or
      *    patched with retention disabled, or whose archiving failed.
      * (2 and 3 are the same lookup: the record's path, if it still exists.)
+     *
+     * This is also what keeps a clone safe: the archive is keyed by package, one per version,
+     * so a clone patched at a newer app version supersedes the app's own archived original —
+     * but the version check above means the app's own record, still tracking the older version,
+     * never silently resolves to the clone's (wrong-version) replacement. It falls through to
+     * its own recorded path instead, exactly as if no archive had ever existed for it.
      */
     suspend fun resolveInputApk(record: PatchedAppRecord): File? = withContext(Dispatchers.IO) {
         val archived = mutex.withLock {

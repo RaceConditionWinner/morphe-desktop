@@ -5,6 +5,7 @@
 
 package app.morphe.engine
 
+import app.morphe.engine.model.PatchedAppRecord
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -102,6 +103,46 @@ class OriginalApkRepositoryTest {
         assertEquals("2.0.0", record.version)
         assertEquals("v2 bytes, longer!!", File(record.filePath).readText())
         assertEquals(1, repo.getAll().size)
+    }
+
+    @Test
+    fun `resolveInputApk never lets an older record pick up a newer record's archive`() = runBlocking {
+        // Models two PatchedAppRecords sharing one package — the app's own build and a clone
+        // patched later at a newer app version, which is exactly the scenario the archive's
+        // one-slot-per-package design (see the test above) has to stay safe against: the app's
+        // own record must keep repatching from the version it actually tracks, never silently
+        // pick up the clone's replacement.
+        val archiveDir = tempDir()
+        val repo = newRepository(archiveDir)
+        val v1Source = fakeApk(tempDir(), name = "v1-source.apk", content = "v1 bytes")
+
+        repo.saveOriginalApk("com.example.app", "1.0.0", v1Source)
+        val recordAtV1 = PatchedAppRecord(
+            id = "com.example.app",
+            packageName = "com.example.app",
+            displayName = "Example",
+            apkVersion = "1.0.0",
+            inputApkPath = v1Source.absolutePath,
+            outputApkPath = "/out.apk",
+            patchedAt = 1L,
+            patchedWithMorpheVersion = "test",
+        )
+
+        // Still resolves to the archive while it's the current one
+        val beforeSupersede = repo.resolveInputApk(recordAtV1)
+        assertEquals("v1 bytes", beforeSupersede?.readText())
+
+        // A clone (or any other record sharing this package) gets patched at a newer version,
+        // superseding — and deleting — the v1 archive
+        repo.saveOriginalApk("com.example.app", "2.0.0", fakeApk(tempDir(), content = "v2 bytes"))
+
+        // recordAtV1 still tracks 1.0.0. It must not resolve to the v2 archive now registered
+        // under the same package — it should fall through to its own recorded path instead,
+        // which is still there (saveOriginalApk never deletes the caller's source on its own;
+        // that's the separate discardSource step)
+        val afterSupersede = repo.resolveInputApk(recordAtV1)
+        assertEquals(v1Source.absolutePath, afterSupersede?.absolutePath)
+        assertEquals("v1 bytes", afterSupersede?.readText())
     }
 
     @Test
