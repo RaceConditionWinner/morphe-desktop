@@ -66,6 +66,7 @@ import app.morphe.gui.ui.icons.MorpheIcons
 import app.morphe.gui.ui.screens.home.HomeAppItem
 import app.morphe.gui.ui.screens.home.HomeAppStatus
 import app.morphe.gui.ui.theme.LocalMorpheCorners
+import app.morphe.gui.ui.theme.LocalMorpheDimens
 import app.morphe.gui.ui.theme.LocalMorpheFont
 import app.morphe.gui.util.DownloadUrlResolver.openUrlAndFollowRedirects
 import app.morphe.gui.util.withVersionPrefix
@@ -169,9 +170,12 @@ internal fun HomeAppCard(
                     )
                     Spacer(Modifier.height(4.dp))
                     Row(
-                        // Reserved whether a badge is showing or not, so the name
-                        // above stays put as state comes and goes
-                        modifier = Modifier.height(22.dp),
+                        // Reserved at the chip's own minimum height (not a guessed
+                        // value) so a badge is never clipped by a row shorter than
+                        // what MorpheCardChip actually needs — reserved whether a
+                        // badge is showing or not, so the name above stays put as
+                        // state comes and goes
+                        modifier = Modifier.height(LocalMorpheDimens.current.chipHeight),
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
