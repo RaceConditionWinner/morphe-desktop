@@ -5,7 +5,9 @@
 
 package app.morphe.gui.ui.theme
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
@@ -16,6 +18,7 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -148,6 +151,74 @@ object MorpheOutline {
 
     /** Alpha for a neutral hairline against `MaterialTheme.colorScheme.outline`. */
     const val hairlineAlpha = 0.12f
+
+    /** Alpha of the accent border on an interactive surface: buttons, menus, tooltips. */
+    const val emphasisBorderAlpha = 0.35f
+
+    /** Alpha of the border on a selected surface. */
+    const val selectedBorderAlpha = 0.55f
+
+    /** Alpha of the border on a disabled surface. */
+    const val disabledBorderAlpha = 0.08f
+
+    // ── Semantic outlines ────────────────────────────────────────────────
+    // Reach for one of these instead of `BorderStroke(1.dp, color.copy(alpha = …))`, so the
+    // same meaning draws the same line on every surface.
+
+    /** The neutral outline as a plain color, for APIs that take a color rather than a stroke. */
+    @Composable
+    fun neutralColor(): Color = MaterialTheme.colorScheme.outline.copy(alpha = badgeBorderAlpha)
+
+    /** The accent outline as a plain color. */
+    @Composable
+    fun accentColor(color: Color = LocalMorpheAccents.current.primary): Color =
+        color.copy(alpha = emphasisBorderAlpha)
+
+    /** Quiet separation: dividers, dialog and card chrome. */
+    @Composable
+    fun subtle(): BorderStroke = stroke(MaterialTheme.colorScheme.outline, hairlineAlpha)
+
+    /** Default outline of an interactive control at rest. */
+    @Composable
+    fun neutral(): BorderStroke = stroke(MaterialTheme.colorScheme.outline, badgeBorderAlpha)
+
+    /** A selected or focused surface. */
+    @Composable
+    fun selected(): BorderStroke = stroke(MaterialTheme.colorScheme.primary, selectedBorderAlpha)
+
+    /** An accent-colored surface; defaults to the theme's primary accent. */
+    @Composable
+    fun accent(color: Color = LocalMorpheAccents.current.primary): BorderStroke =
+        stroke(color, emphasisBorderAlpha)
+
+    @Composable
+    fun success(): BorderStroke = stroke(LocalMorpheAccents.current.secondary, accentBorderAlpha)
+
+    @Composable
+    fun warning(): BorderStroke = stroke(LocalMorpheAccents.current.warning, accentBorderAlpha)
+
+    @Composable
+    fun error(): BorderStroke = stroke(MaterialTheme.colorScheme.error, emphasisBorderAlpha)
+
+    @Composable
+    fun disabled(): BorderStroke = stroke(MaterialTheme.colorScheme.outline, disabledBorderAlpha)
+
+    private fun stroke(color: Color, alpha: Float) = BorderStroke(width, color.copy(alpha = alpha))
+}
+
+/**
+ * The three corner radii surfaces are built from, taken from the active corner style so that
+ * sharp and rounded themes change all of them together.
+ */
+object MorpheShapes {
+    /** Interactive controls: buttons, fields, chips. */
+    val control: Shape @Composable get() = RoundedCornerShape(LocalMorpheCorners.current.small)
+
+    /** Cards and panels (24dp in the rounded style, Manager's card radius). */
+    val card: Shape @Composable get() = RoundedCornerShape(LocalMorpheCorners.current.large)
+
+    /** Dialog surfaces. */
+    val dialog: Shape @Composable get() = RoundedCornerShape(LocalMorpheCorners.current.large)
 }
 
 /**

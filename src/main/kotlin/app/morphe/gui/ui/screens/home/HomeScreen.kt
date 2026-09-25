@@ -106,6 +106,7 @@ fun HomeScreenContent(
                 initialSelectionByBundle = record.patchSelectionByBundle,
                 initialPatchOptions = record.patchOptionValues,
                 apkVersion = record.apkVersion,
+                isClone = record.isClone,
             )
         )
     }

@@ -121,4 +121,9 @@ data class PatchConfig(
      * once the source that declared it is gone.
      */
     val appIconColorHex: String? = null,
+    /**
+     * True when this patch rebuilds an existing clone, so the recorded app stays a clone
+     * (its own tracked record, own package) rather than becoming a second copy of the original.
+     */
+    val isClone: Boolean = false,
 )

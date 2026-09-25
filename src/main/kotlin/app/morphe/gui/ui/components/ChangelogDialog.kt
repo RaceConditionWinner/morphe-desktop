@@ -5,7 +5,6 @@
 
 package app.morphe.gui.ui.components
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.layout.*
@@ -28,9 +27,27 @@ import app.morphe.gui.data.constants.AppConstants
 import app.morphe.gui.ui.theme.LocalMorpheAccents
 import app.morphe.gui.ui.theme.LocalMorpheCorners
 import app.morphe.gui.ui.theme.LocalMorpheFont
+import app.morphe.gui.util.ChangelogMarkdown
+import app.morphe.gui.ui.theme.MorpheOutline
+import app.morphe.gui.util.Logger
 import app.morphe.morphe_desktop.generated.resources.*
-import java.io.File
 import org.jetbrains.compose.resources.stringResource
+
+/**
+ * Reads the app's own bundled CHANGELOG.md from the classpath (packaged into the JAR by
+ * `processResources`, see build.gradle.kts) rather than the working directory, which is
+ * arbitrary once Morphe is launched from outside the repo — a plain `File("CHANGELOG.md")`
+ * silently found nothing outside a dev checkout.
+ */
+private fun readBundledChangelog(): String? = try {
+    Thread.currentThread().contextClassLoader
+        ?.getResourceAsStream("CHANGELOG.md")
+        ?.bufferedReader()
+        ?.use { it.readText() }
+} catch (t: Throwable) {
+    Logger.error("Failed to read bundled CHANGELOG.md", t)
+    null
+}
 
 @Composable
 fun ChangelogDialog(
@@ -44,15 +61,19 @@ fun ChangelogDialog(
     var showAllReleases by remember { mutableStateOf(false) }
 
     val notAvailableMsg = stringResource(Res.string.changelog_not_available)
-    val rawChangelog = try {
-        File("CHANGELOG.md").readText()
-    } catch (e: Exception) {
-        notAvailableMsg
+    val sections = remember { readBundledChangelog()?.let(ChangelogMarkdown::parse) }
+
+    // The first version heading starts the "current" release; every section before it
+    // (if any) plus everything from the second heading onward is older history.
+    val firstVersionIndex = sections?.indexOfFirst { it.heading != null } ?: -1
+    val currentRelease = when {
+        sections == null -> notAvailableMsg
+        firstVersionIndex == -1 -> ChangelogMarkdown.render(sections)
+        else -> ChangelogMarkdown.render(sections.subList(0, firstVersionIndex + 1))
     }
-    
-    val chunks = rawChangelog.split(Regex("\\n(?=## )"), limit = 2)
-    val currentRelease = chunks.getOrNull(0) ?: rawChangelog
-    val olderReleases = chunks.getOrNull(1) ?: ""
+    val olderReleases = if (sections != null && firstVersionIndex in sections.indices) {
+        ChangelogMarkdown.render(sections.subList(firstVersionIndex + 1, sections.size))
+    } else ""
 
     val changelogScroll = rememberScrollState()
 
@@ -98,7 +119,7 @@ fun ChangelogDialog(
                                 .padding(horizontal = 8.dp)
                                 .handCursor(),
                             shape = RoundedCornerShape(corners.small),
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f))
+                            border = MorpheOutline.neutral(),
                         ) {
                             Text(
                                 text = stringResource(Res.string.changelog_show_older_button),

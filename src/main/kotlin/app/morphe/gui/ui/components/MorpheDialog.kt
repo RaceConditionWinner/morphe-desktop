@@ -5,6 +5,7 @@
 
 package app.morphe.gui.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -43,6 +44,8 @@ import app.morphe.gui.ui.theme.shiftLightness
 import app.morphe.gui.ui.theme.contrastingForeground
 import app.morphe.gui.ui.theme.LocalMorpheCorners
 import app.morphe.gui.ui.theme.LocalMorpheFont
+import app.morphe.gui.ui.theme.MorpheOutline
+import app.morphe.gui.ui.theme.MorpheShapes
 
 /**
  * Dialog chrome alone: shape, surface colour, padding, spacing.
@@ -61,12 +64,16 @@ fun MorpheDialogSurface(
     horizontalAlignment: Alignment.Horizontal = Alignment.CenterHorizontally,
     contentPadding: PaddingValues = PaddingValues(20.dp),
     verticalArrangement: Arrangement.Vertical = Arrangement.spacedBy(14.dp),
+    /** Drawn by the [Surface] itself — pass [MorpheOutline.accent] for a dialog that
+     * needs to stand out from the background it sits over. Never add a second border
+     * via [modifier]; the two would stack. */
+    border: BorderStroke? = MorpheOutline.subtle(),
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    val corners = LocalMorpheCorners.current
     Surface(
-        shape = RoundedCornerShape(corners.large),
+        shape = MorpheShapes.dialog,
         color = MaterialTheme.colorScheme.surface,
+        border = border,
         modifier = modifier,
     ) {
         Column(

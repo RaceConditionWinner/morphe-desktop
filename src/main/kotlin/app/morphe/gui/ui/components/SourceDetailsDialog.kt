@@ -7,7 +7,6 @@ package app.morphe.gui.ui.components
 
 import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -26,7 +25,6 @@ import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -34,7 +32,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -56,11 +53,12 @@ import androidx.compose.ui.window.DialogProperties
 import app.morphe.gui.data.model.PatchSource
 import app.morphe.gui.data.model.PatchSourceType
 import app.morphe.gui.data.repository.ChangelogRepository
+import app.morphe.gui.data.repository.changelogRequest
 import app.morphe.gui.ui.icons.MorpheIcons
 import app.morphe.gui.ui.theme.LocalMorpheAccents
 import app.morphe.gui.ui.theme.LocalMorpheCorners
 import app.morphe.gui.ui.theme.LocalMorpheFont
-import app.morphe.gui.util.ChangelogEntry
+import app.morphe.gui.ui.theme.MorpheOutline
 import org.koin.compose.koinInject
 import app.morphe.morphe_desktop.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
@@ -106,12 +104,11 @@ internal fun SourceDetailsDialog(
 
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         MorpheDialogSurface(
-            modifier = Modifier
-                .widthIn(min = 360.dp, max = 440.dp)
-                // Same accent border as the overview grid (SourceManagementSheet) —
-                // this dialog sits over the same dark home screen and would blend
-                // into it identically without one.
-                .border(1.dp, accents.primary.copy(alpha = 0.35f), RoundedCornerShape(LocalMorpheCorners.current.large)),
+            modifier = Modifier.widthIn(min = 360.dp, max = 440.dp),
+            // Same accent border as the overview grid (SourceManagementSheet) — this
+            // dialog sits over the same dark home screen and would blend into it
+            // identically without one.
+            border = MorpheOutline.accent(),
             horizontalAlignment = Alignment.Start,
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
@@ -181,7 +178,7 @@ internal fun SourceDetailsDialog(
                             )
                         }
 
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = MorpheOutline.hairlineAlpha))
 
                         ToggleRow(
                             title = stringResource(Res.string.patch_source_dialog_pre_release_title),
@@ -215,7 +212,7 @@ internal fun SourceDetailsDialog(
                 }
             }
 
-            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = MorpheOutline.hairlineAlpha))
 
             // Fixed action footer: pinned below the scroll region, so it's always
             // reachable no matter how long the middle section (changelog included)
@@ -358,8 +355,6 @@ private fun VersionRow(
     val source = state.source
     val canExpand = source.type != PatchSourceType.LOCAL && state.version != null
     var expanded by remember(source.id) { mutableStateOf(false) }
-    var entries by remember(source.id) { mutableStateOf<List<ChangelogEntry>?>(null) }
-    var loading by remember(source.id) { mutableStateOf(false) }
     val changelogRepository = koinInject<ChangelogRepository>()
 
     val corners = LocalMorpheCorners.current
@@ -369,12 +364,7 @@ private fun VersionRow(
             .fillMaxWidth()
             .clip(RoundedCornerShape(corners.small))
             .background(MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp))
-            .then(if (canExpand) Modifier.handCursor().clickable {
-                expanded = !expanded
-                if (expanded && entries == null && !loading) {
-                    loading = true
-                }
-            } else Modifier)
+            .then(if (canExpand) Modifier.handCursor().clickable { expanded = !expanded } else Modifier)
             .padding(horizontal = 12.dp, vertical = 10.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -408,32 +398,16 @@ private fun VersionRow(
         }
 
         if (expanded) {
-            // Fetch exactly once per (source, expand) — not on every recomposition —
-            // by gating on `entries == null`, which flips to a real (possibly empty)
-            // list after the first successful or failed attempt.
-            LaunchedEffect(source.id, loading) {
-                if (loading) {
-                    entries = changelogRepository.entriesFor(source, prerelease = source.usePreRelease)
-                    loading = false
-                }
+            // Only the version this row names — no baseline, no app scope: the source
+            // detail view is describing the release as a whole, not any one app's slice
+            // of it. Fetches lazily, only now that the row is actually expanded.
+            val request = remember(source, state.version) {
+                source.changelogRequest(currentVersion = state.version)
             }
             Spacer(Modifier.height(10.dp))
-            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = MorpheOutline.hairlineAlpha))
             Spacer(Modifier.height(10.dp))
-            val loadedEntries = entries
-            when {
-                loading -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
-                    Text(stringResource(Res.string.source_details_loading_changelog), fontSize = 11.sp, fontFamily = font, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                loadedEntries.isNullOrEmpty() -> Text(
-                    stringResource(Res.string.source_details_no_changelog),
-                    fontSize = 11.sp,
-                    fontFamily = font,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                else -> FormattedReleaseNotes(markdown = loadedEntries.first().content)
-            }
+            ChangelogSection(repository = changelogRepository, request = request)
         }
     }
 }

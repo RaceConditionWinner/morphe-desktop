@@ -282,6 +282,10 @@ tasks {
         from(arrayOf(rootProject.file("NOTICE"), rootProject.file("LICENSE"))) {
             into("META-INF")
         }
+        // The in-app "What's new" dialog reads its own CHANGELOG.md from the classpath
+        // (see ChangelogDialog.kt) — it must never read from the working directory, which
+        // is arbitrary once the app is packaged and launched from outside the repo.
+        from(rootProject.file("CHANGELOG.md"))
     }
 
     // ============================================================================

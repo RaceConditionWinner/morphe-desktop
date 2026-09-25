@@ -87,10 +87,12 @@ import androidx.compose.ui.window.DialogProperties
 import app.morphe.gui.data.model.AppCardColorDefaults
 import app.morphe.gui.data.model.PatchSource
 import app.morphe.gui.data.repository.ChangelogRepository
+import app.morphe.gui.data.repository.changelogRequest
 import app.morphe.gui.data.repository.PatchSourceManager
 import app.morphe.gui.ui.components.ActionButton
 import app.morphe.gui.ui.components.AppCard
 import app.morphe.gui.ui.components.LocalAppCardInk
+import app.morphe.gui.ui.components.ChangelogSection
 import app.morphe.gui.ui.components.FormattedReleaseNotes
 import app.morphe.gui.ui.components.MorpheActionButton
 import app.morphe.gui.ui.components.MorpheCardChip
@@ -101,8 +103,6 @@ import app.morphe.gui.ui.theme.LocalMorpheCorners
 import app.morphe.gui.ui.theme.LocalMorpheFont
 import app.morphe.gui.ui.theme.LocalMorpheMono
 import app.morphe.gui.ui.theme.MorpheOutline
-import app.morphe.gui.util.ChangelogEntry
-import app.morphe.gui.util.ChangelogParser
 import app.morphe.gui.util.DeviceInstallState
 import app.morphe.gui.util.FormatUtils
 import app.morphe.gui.util.currentLocale
@@ -287,6 +287,7 @@ fun InstalledAppInfoDialog(
         BundleChangelogDialog(
             sourceId = sourceId,
             sinceVersion = item.updateInfo?.sources?.firstOrNull { it.sourceId == sourceId }?.usedVersion,
+            appNames = item.changelogAppNames,
             onDismiss = { changelogSourceId = null },
         )
     }
@@ -1263,11 +1264,18 @@ private fun PatchSearchField(
  * Reuses the changelog Morphe already fetches to decide whether to badge an
  * update at all, so opening this never asks a question the badge did not already
  * ask, and reuses [FormattedReleaseNotes] rather than rendering markdown twice.
+ *
+ * [appNames] narrows every entry to the bullets scoped to this app — a source
+ * bundling several apps must never show Reddit's changes when the user opened
+ * Instagram's What's New. Bullets scoped to no app at all (general/maintenance
+ * changes) are kept under their own heading rather than dropped, since those
+ * genuinely do apply to every app the source patches.
  */
 @Composable
 private fun BundleChangelogDialog(
     sourceId: String,
     sinceVersion: String?,
+    appNames: Set<String>,
     onDismiss: () -> Unit,
 ) {
     val font = LocalMorpheFont.current
@@ -1275,14 +1283,14 @@ private fun BundleChangelogDialog(
     val changelogRepository = koinInject<ChangelogRepository>()
     val sources by koinInject<PatchSourceManager>().allSources.collectAsState()
     val source: PatchSource? = sources.firstOrNull { it.id == sourceId }
+    val generalHeading = stringResource(Res.string.changelog_general_changes)
 
-    var entries by remember(sourceId) { mutableStateOf<List<ChangelogEntry>?>(null) }
-    var loading by remember(sourceId) { mutableStateOf(true) }
-
-    LaunchedEffect(sourceId, source?.usePreRelease) {
-        loading = true
-        entries = source?.let { changelogRepository.entriesFor(it, prerelease = it.usePreRelease) }
-        loading = false
+    // Scoped to this app's own bullets (plus general/unscoped ones) so a source bundling
+    // several apps never shows another app's changes here, and to everything strictly newer
+    // than the version this build was patched with — the same question the update badge
+    // already asked, never re-derived by hand in this dialog.
+    val request = remember(source, sinceVersion, appNames) {
+        source?.changelogRequest(sinceVersion = sinceVersion, appNames = appNames, generalHeading = generalHeading)
     }
 
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
@@ -1315,42 +1323,20 @@ private fun BundleChangelogDialog(
                     Box(modifier = Modifier.weight(1f, fill = false).heightIn(max = 420.dp)) {
                         val scroll = rememberScrollState()
                         Column(modifier = Modifier.verticalScroll(scroll)) {
-                            val loaded = entries
-                            when {
-                                loading -> Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                ) {
-                                    CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
-                                    Text(
-                                        stringResource(Res.string.source_details_loading_changelog),
-                                        fontSize = 11.sp,
-                                        fontFamily = font,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                                loaded.isNullOrEmpty() -> Text(
+                            if (source == null) {
+                                Text(
                                     stringResource(Res.string.source_details_no_changelog),
                                     fontSize = 11.sp,
                                     fontFamily = font,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
-                                else -> {
-                                    val newer = ChangelogParser
-                                        .entriesNewerThan(loaded, sinceVersion)
-                                        .ifEmpty { loaded.take(1) }
-                                    newer.forEach { entry ->
-                                        Text(
-                                            text = entry.version.withVersionPrefix(),
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.SemiBold,
-                                            fontFamily = font,
-                                            color = MaterialTheme.colorScheme.onSurface,
-                                            modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
-                                        )
-                                        FormattedReleaseNotes(markdown = entry.content)
-                                    }
-                                }
+                            } else {
+                                ChangelogSection(
+                                    repository = changelogRepository,
+                                    request = request,
+                                    showVersionHeadings = true,
+                                    emptyMessage = stringResource(Res.string.installed_info_no_scoped_changelog),
+                                )
                             }
                         }
                         VerticalScrollbar(

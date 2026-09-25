@@ -20,6 +20,7 @@ import app.morphe.gui.data.model.SourceVersionPref
 import app.morphe.gui.data.model.SupportedApp
 import app.morphe.gui.data.repository.ActiveMode
 import app.morphe.gui.data.repository.ChangelogRepository
+import app.morphe.gui.data.repository.changelogRequest
 import app.morphe.gui.data.repository.ConfigRepository
 import app.morphe.gui.data.repository.PatchRepository
 import app.morphe.gui.data.repository.PatchSourceManager
@@ -40,7 +41,6 @@ import app.morphe.gui.util.Logger
 import app.morphe.gui.util.PatchService
 import app.morphe.gui.util.PatchException
 import app.morphe.gui.util.SupportedAppExtractor
-import app.morphe.gui.util.ChangelogParser
 import app.morphe.gui.util.VersionResolution
 import app.morphe.gui.util.VersionStatus
 import app.morphe.gui.util.isNewerVersion
@@ -366,6 +366,10 @@ class HomeViewModel(
      * equivalent to the pre-multi-source flow.
      */
     private fun loadPatchesAndSupportedApps(forceRefresh: Boolean = false) {
+        // An explicit refresh refreshes what the sources say about themselves as well; the
+        // patches reloading while their changelogs keep serving old text would read as a
+        // refresh that half-happened
+        if (forceRefresh) changelogRepository.invalidateAll()
         loadJob?.cancel()
         loadJob = screenModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoadingPatches = true, patchLoadError = null, showSourcesFailedBanner = false)
@@ -831,7 +835,7 @@ class HomeViewModel(
         val resolvedBySource = resolvedVersionBySource()   // what Re-patch will use right now
         val latestBySource = latestAvailableBySource()     // newest available (may need downloading)
         val app = apps.find { it.packageName == record.packageName }
-        val appNames = appNameCandidates(app, record)
+        val appNames = changelogAppNames(app?.displayName, record.displayName, record.packageName)
         val sources = record.sourcesSnapshot
             // Only sources that actually contributed patches. The selection map has an
             // (empty) entry per enabled bundle, so an enabled-but-unused source has an
@@ -891,10 +895,10 @@ class HomeViewModel(
             ?: return true
         val prerelease = resolved.channel == EnabledSourcesLoader.Channel.DEV_LATEST ||
             resolved.channel == EnabledSourcesLoader.Channel.DEV_OLDER
-        val entries = changelogRepository.entriesFor(resolved.source, prerelease) ?: return true
-        if (appNames.isEmpty()) return true
-
-        val relevant = ChangelogParser.hasChangesFor(entries, snap.version, appNames)
+        val relevant = changelogRepository.hasRelevantChanges(
+            resolved.source.changelogRequest(sinceVersion = snap.version, appNames = appNames)
+                .copy(prerelease = prerelease)
+        )
         if (!relevant) {
             Logger.debug(
                 "Changelog: '${snap.sourceName}' ${snap.version} -> $latest lists no scoped " +
@@ -902,16 +906,6 @@ class HomeViewModel(
             )
         }
         return relevant
-    }
-
-    /**
-     * Names a changelog could have scoped its entries to. The record's own label
-     * is carried too, so an app whose source is gone can still be matched.
-     */
-    private fun appNameCandidates(app: SupportedApp?, record: PatchedAppRecord): Set<String> = buildSet {
-        app?.displayName?.takeIf { it.isNotBlank() }?.let { add(it) }
-        record.displayName.takeIf { it.isNotBlank() }?.let { add(it) }
-        add(SupportedApp.getDisplayName(record.packageName))
     }
 
     /**

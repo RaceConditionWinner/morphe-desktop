@@ -90,6 +90,8 @@ class PatchSelectionViewModel(
      *  re-read a version from. Blank falls back to the engine's manifest/filename resolution.
      *  Non-null (rather than String?) so no null flows through the Koin parametersOf chain. */
     private val apkVersion: String = "",
+    /** True when repatching a clone; stamped on the [PatchConfig] so the record stays a clone. */
+    private val isClone: Boolean = false,
     private val seenPatchesRepository: SeenPatchesRepository = SeenPatchesRepository(),
     /** Configured source name to its stable id, so a record can store the id rather than a label. */
     private val sourceIdsByName: Map<String, String> = emptyMap(),
@@ -673,6 +675,7 @@ class PatchSelectionViewModel(
             patchesSourceName = displaySources.joinToString(", ") { it.sourceName },
             patchesVersion = displaySources.joinToString(", ") { it.version },
             appIconColorHex = declaredAppIconColor(),
+            isClone = isClone,
         )
     }
 

@@ -913,7 +913,7 @@
     <string name="installed_info_device_version">Version on device</string>
     <string name="installed_info_badge_copy">Copy</string>
     <string name="installed_info_not_patched_title">Unpatched version installed</string>
-    <string name="installed_info_not_patched_description">Something other than Morphe\'s build holds this package name. Patch again to put it back.</string>
+    <string name="installed_info_not_patched_description">Something other than Morphe's build holds this package name. Patch again to put it back.</string>
     <string name="installed_info_unverified_notice">Morphe could not confirm that the app on the device is the build it produced.</string>
     <string name="installed_info_uninstalled_title">Not on the device</string>
     <string name="installed_info_uninstalled_description">The patched APK is still here, so it can be installed again without patching.</string>
@@ -922,7 +922,7 @@
     <string name="installed_info_app_update_title">Newer app version supported</string>
     <string name="installed_info_app_update_description">The sources now support a newer version of this app than the one that was patched.</string>
     <string name="installed_info_version_move">%1$s to %2$s</string>
-    <string name="installed_info_whats_new">What\'s new</string>
+    <string name="installed_info_whats_new">What's new</string>
     <string name="installed_info_ignore_version">Ignore</string>
     <string name="installed_info_stop_ignoring_version">Stop ignoring</string>
     <string name="installed_info_action_patch">Patch</string>
@@ -934,4 +934,14 @@
     <string name="installed_info_section_patch_options">Patch options</string>
     <string name="installed_info_no_device">No device connected</string>
     <string name="installed_info_device_apk_path">Installed APK path</string>
+    <string name="changelog_general_changes">General changes</string>
+    <string name="changelog_empty">No new changes</string>
+    <string name="changelog_load_failed">Couldn't load the changelog</string>
+    <string name="changelog_stale">Showing saved changelog — couldn't refresh</string>
+    <string name="changelog_older_empty">No older releases</string>
+    <string name="changelog_loading_older">Loading older releases…</string>
+    <string name="changelog_older_failed">Couldn't load older releases</string>
+    <string name="changelog_for_app">%1$s changelog</string>
+    <string name="changelog_release_page">Release page</string>
+    <string name="installed_info_no_scoped_changelog">No changes specific to this app in this release.</string>
 </resources>

@@ -274,3 +274,33 @@ data class AppliedBundle(
 ) {
     val patchCount: Int get() = patchNames.size + unresolvedNames.size
 }
+
+/**
+ * Names a changelog could have scoped its entries to for an app whose sources
+ * call it [supportedAppName] and whose own resolved label is [displayName],
+ * under [packageName]. Multiple candidates exist because the same app can be
+ * named differently across sources — the bundle's own Compatibility
+ * declaration versus a locally recorded label — and matching any one is
+ * enough. [displayName] alone keeps this working once the source that
+ * supplied [supportedAppName] is gone.
+ *
+ * The one definition of "what does a changelog consider this app" — used to
+ * decide whether a source update is relevant (before any [HomeAppItem]
+ * exists to ask) and, via [HomeAppItem.changelogAppNames], to scope a
+ * changelog's actual content once one does. The update badge, the dialog's
+ * rebuild banner, and What's New all read from this rather than each
+ * resolving names of their own.
+ */
+fun changelogAppNames(
+    supportedAppName: String?,
+    displayName: String,
+    packageName: String,
+): Set<String> = buildSet {
+    supportedAppName?.takeIf { it.isNotBlank() }?.let { add(it) }
+    displayName.takeIf { it.isNotBlank() }?.let { add(it) }
+    add(SupportedApp.getDisplayName(packageName))
+}
+
+/** [changelogAppNames] for this item. */
+val HomeAppItem.changelogAppNames: Set<String>
+    get() = changelogAppNames(supportedApp?.displayName, displayName, packageName)

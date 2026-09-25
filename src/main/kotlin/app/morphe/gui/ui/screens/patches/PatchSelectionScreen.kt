@@ -142,6 +142,8 @@ data class PatchSelectionScreen(
     /** The app's versionName (parsed from the APK), threaded to the output-name helper so
      *  the filename is unique by app version even for renamed bundles. Blank = not supplied. */
     val apkVersion: String = "",
+    /** Set by a repatch of a clone record; carried through to the persisted record. */
+    val isClone: Boolean = false,
 ) : Screen {
 
     @Composable
@@ -151,7 +153,7 @@ data class PatchSelectionScreen(
             parametersOf(
                 apkPath, apkName, patchesFilePath, packageName, apkArchitectures,
                 effectiveList, patchSourceNames, initialSelectionByBundle, initialPatchOptions,
-                apkVersion,
+                apkVersion, isClone,
             )
         }
         PatchSelectionScreenContent(viewModel = viewModel)

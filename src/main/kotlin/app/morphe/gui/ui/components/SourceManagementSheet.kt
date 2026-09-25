@@ -57,6 +57,7 @@ import app.morphe.gui.ui.icons.MorpheIcons
 import app.morphe.gui.ui.theme.LocalMorpheAccents
 import app.morphe.gui.ui.theme.LocalMorpheCorners
 import app.morphe.gui.ui.theme.LocalMorpheFont
+import app.morphe.gui.ui.theme.MorpheOutline
 import app.morphe.gui.util.EnabledSourcesLoader
 import app.morphe.morphe_desktop.generated.resources.*
 import kotlinx.coroutines.launch
@@ -215,13 +216,12 @@ fun SourceManagementSheet(
 
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         MorpheDialogSurface(
-            modifier = Modifier
-                .width(dialogWidth)
-                // Accent border: without it this panel — same dark surface colour as
-                // the home screen behind it — has nothing to visually separate it,
-                // especially at this reduced scale where more of that background
-                // shows around the edges.
-                .border(1.dp, accents.primary.copy(alpha = 0.35f), RoundedCornerShape(corners.large)),
+            modifier = Modifier.width(dialogWidth),
+            // Accent border: without it this panel — same dark surface colour as
+            // the home screen behind it — has nothing to visually separate it,
+            // especially at this reduced scale where more of that background
+            // shows around the edges.
+            border = MorpheOutline.accent(),
             contentModifier = Modifier.heightIn(max = dialogMaxHeight),
             horizontalAlignment = Alignment.Start,
             verticalArrangement = Arrangement.spacedBy(10.dp),

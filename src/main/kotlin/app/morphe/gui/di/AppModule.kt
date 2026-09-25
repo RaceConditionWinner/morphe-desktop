@@ -100,10 +100,10 @@ val appModule = module {
     single { SeenPatchesRepository() }
     single { BlocklistRepository(get(), get()) }
     single { SourceMuteRepository() }
-    single { PatchSourceManager(get(), get(), get(), get(), get()) }
+    single { PatchSourceManager(get(), get(), get(), get(), get(), get()) }
     single { PatchService() }
     single { UpdateCheckRepository(get()) }
-    single { ChangelogRepository(get()) }
+    single { ChangelogRepository(get<HttpClient>()) }
     single { AvatarRepository(get()) }
     single { PatchedAppStore.shared }
     single {
@@ -150,6 +150,7 @@ val appModule = module {
             params.get(),
             params.get(),
             params.get(),
+            isClone = params.get(),
             sourceIdsByName = psm.getEnabledSourcesSync().associate { it.name to it.id },
         )
     }

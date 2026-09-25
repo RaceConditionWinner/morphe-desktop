@@ -33,6 +33,7 @@ class PatchSourceManager(
     private val blocklistRepository: BlocklistRepository,
     private val sourceMuteRepository: SourceMuteRepository,
     private val patchPreferencesRepository: PatchPreferencesRepository,
+    private val changelogRepository: ChangelogRepository,
 ) {
     private val repositories = mutableMapOf<String, PatchRepository>()
 
@@ -218,6 +219,9 @@ class PatchSourceManager(
      */
     fun notifyCacheCleared() {
         cachedActiveRepo?.clearCache()
+        // Patch files and changelogs are one cache to the user: clearing one must not leave
+        // the other serving data the user just asked to be rid of
+        changelogRepository.invalidateAll()
         _sourceVersion.value++
     }
 
@@ -266,8 +270,14 @@ class PatchSourceManager(
      * cached repo for that id so a re-add doesn't reuse stale state.
      */
     suspend fun removeSource(id: String) {
+        // Looked up before the config write removes it, since invalidation needs
+        // the source's own URL to know which changelog cache entry is its
+        val removed = _allSources.value.firstOrNull { it.id == id }
         configRepository.removePatchSource(id)
         repositories.remove(id)
+        // Attribution for already-tracked apps lives on their records, not in this cache, so
+        // the source's changelog entries (stale fallback included) can go entirely
+        removed?.let { changelogRepository.invalidate(it, dropStale = true) }
         // A removed source can't stay "muted for" anything, and a stale strike against a
         // file that no longer exists would only ever misattribute a future unrelated source
         // reusing the same id.
@@ -351,9 +361,14 @@ class PatchSourceManager(
      * Update an existing source (e.g. rename). For non-deletable sources, only updates the pre-release flag.
      */
     suspend fun updateSource(updated: PatchSource) {
+        // Captured before the write: after it, the old URL is unreachable from the config,
+        // and its changelog would sit in the cache under a URL nothing points at any more
+        val previous = _allSources.value.firstOrNull { it.id == updated.id }
         configRepository.updatePatchSource(updated)
         // Drop the cached repo so the new url/name is picked up on next access.
         repositories.remove(updated.id)
+        previous?.let { changelogRepository.invalidate(it, dropStale = true) }
+        changelogRepository.invalidate(updated)
         refreshEnabledSources()
         _sourceVersion.value++
     }

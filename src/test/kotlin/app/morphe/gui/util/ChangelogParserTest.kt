@@ -106,4 +106,117 @@ class ChangelogParserTest {
         val foreign = ChangelogParser.parse("# Changelog\n\n- did some stuff\n- did more stuff")
         assertTrue(foreign.isEmpty())
     }
+
+    // ── entriesFor: app-scoped filtering ────────────────────────────────────
+
+    private val multiApp = ChangelogParser.parse(
+        """
+        ## [1.45.0](https://x/compare/v1.44.0...v1.45.0) (2026-09-01)
+
+        * **Instagram:** Added feature A
+        * **Reddit:** Fixed feature B
+        * **YouTube:** Changed feature C
+        * General maintenance
+        """.trimIndent()
+    )
+
+    @Test
+    fun `entriesFor keeps only the requested app's bullets`() {
+        val scoped = ChangelogParser.entriesFor(multiApp, listOf("Instagram"))
+        assertEquals(1, scoped.size)
+        assertTrue(scoped[0].content.contains("Added feature A"))
+        assertFalse(scoped[0].content.contains("Fixed feature B"), "Reddit's change leaked into Instagram's scope")
+        assertFalse(scoped[0].content.contains("Changed feature C"), "YouTube's change leaked into Instagram's scope")
+    }
+
+    @Test
+    fun `entriesFor puts unscoped bullets under the general heading, once asked for one`() {
+        val withGeneral = ChangelogParser.entriesFor(multiApp, listOf("Instagram"), generalHeading = "General changes")
+        assertTrue(withGeneral[0].content.contains("### General changes"))
+        assertTrue(withGeneral[0].content.contains("General maintenance"))
+
+        // Without a heading to file them under, unscoped bullets are left out entirely
+        // rather than attached to whichever app happened to be asked for
+        val withoutGeneral = ChangelogParser.entriesFor(multiApp, listOf("Instagram"))
+        assertFalse(withoutGeneral[0].content.contains("General maintenance"))
+    }
+
+    @Test
+    fun `entriesFor drops an entry with nothing for the requested app`() {
+        val onlyOthers = ChangelogParser.parse(
+            """
+            ## [2.0.0](https://x/compare/v1.0.0...v2.0.0) (2026-09-01)
+
+            * **Reddit:** Fixed feature B
+            """.trimIndent()
+        )
+        assertTrue(ChangelogParser.entriesFor(onlyOthers, listOf("Instagram")).isEmpty())
+    }
+
+    @Test
+    fun `entriesFor is case insensitive and matches sub-scopes`() {
+        assertEquals(1, ChangelogParser.entriesFor(multiApp, listOf("instagram")).size)
+        assertEquals(1, ChangelogParser.entriesFor(entries, listOf("youtube")).size)
+        // "YouTube - Hide ads" is a sub-scope of "YouTube"
+        val subscoped = ChangelogParser.entriesFor(entries, listOf("YouTube"))
+        assertTrue(subscoped.first().content.contains("Hide ads"))
+    }
+
+    @Test
+    fun `an empty app name list leaves entries untouched`() {
+        assertEquals(multiApp, ChangelogParser.entriesFor(multiApp, emptyList()))
+    }
+
+    @Test
+    fun `entriesFor never mixes another app's bullets into scopedBullets either`() {
+        val scoped = ChangelogParser.entriesFor(multiApp, listOf("Instagram"))
+        assertEquals(setOf("Instagram"), scoped[0].scopedBullets.keys)
+    }
+
+    // ── stopAfterFirstStable ─────────────────────────────────────────────────
+
+    @Test
+    fun `stopAfterFirstStable keeps every prerelease above the first stable baseline`() {
+        val devHistory = """
+            ## [2.0.0-dev.3](https://x/compare/v2.0.0-dev.2...v2.0.0-dev.3) (2026-09-03)
+
+            * **Reddit:** dev change 2
+
+            ## [2.0.0-dev.2](https://x/compare/v2.0.0-dev.1...v2.0.0-dev.2) (2026-09-02)
+
+            * **Reddit:** dev change 1
+
+            ## [1.9.0](https://x/compare/v1.8.0...v1.9.0) (2026-08-01)
+
+            * **Reddit:** last stable change
+
+            ## [1.8.0](https://x/compare/v1.7.0...v1.8.0) (2026-07-01)
+
+            * **Reddit:** older stable change
+        """.trimIndent()
+
+        val truncated = ChangelogParser.parse(devHistory, stopAfterFirstStable = true)
+        // Both dev entries, plus the stable baseline they're built on — nothing below it
+        assertEquals(listOf("2.0.0-dev.3", "2.0.0-dev.2", "1.9.0"), truncated.map { it.version })
+    }
+
+    @Test
+    fun `stopAfterFirstStable has no effect when disabled`() {
+        val devHistory = """
+            ## [2.0.0-dev.1](https://x/compare/v1.9.0...v2.0.0-dev.1) (2026-09-01)
+
+            * **Reddit:** dev change
+
+            ## [1.9.0](https://x/compare/v1.8.0...v1.9.0) (2026-08-01)
+
+            * **Reddit:** stable change
+
+            ## [1.8.0](https://x/compare/v1.7.0...v1.8.0) (2026-07-01)
+
+            * **Reddit:** older stable change
+        """.trimIndent()
+
+        assertEquals(3, ChangelogParser.parse(devHistory, stopAfterFirstStable = false).size)
+        assertEquals(3, ChangelogParser.parse(devHistory).size)
+    }
 }

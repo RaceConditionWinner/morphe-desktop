@@ -254,6 +254,7 @@ class PatchingViewModel(
             patchSelectionByBundle = config.patchSelectionByBundle,
             patchOptionValues = config.patchOptions,
             appIconColorHex = config.appIconColorHex,
+            isClone = config.isClone,
         ).onFailure {
             addLog("Patched, but couldn't save it to Your apps: ${it.message}", LogLevel.WARNING)
         }
