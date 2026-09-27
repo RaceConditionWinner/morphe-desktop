@@ -773,4 +773,6 @@
     <string name="changelog_dialog_title">Zobrazit seznam změn</string>
     <string name="changelog_show_older_button">Zobrazit starší verze</string>
     <string name="changelog_view_on_github_button">Zobrazit na GitHubu</string>
+
+    <string name="source_error_download_failed">Nepodařilo se stáhnout záplaty: %1$s</string>
 </resources>

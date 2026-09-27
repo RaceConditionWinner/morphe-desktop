@@ -797,4 +797,6 @@
     <string name="changelog_dialog_title">Преглед на списъка с промени</string>
     <string name="changelog_show_older_button">Показване на по-стари версии</string>
     <string name="changelog_view_on_github_button">Преглед в GitHub</string>
+
+    <string name="source_error_download_failed">Не можаха да се изтеглят кръпки: %1$s</string>
 </resources>

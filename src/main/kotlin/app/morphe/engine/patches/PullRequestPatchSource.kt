@@ -9,12 +9,9 @@ import app.morphe.engine.GitHubPatMissingException
 import app.morphe.engine.model.Release
 import app.morphe.engine.model.ReleaseAsset
 import app.morphe.engine.network.HttpService
-import app.morphe.gui.data.model.AppConfig
-import app.morphe.gui.data.repository.ConfigRepository
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.koin.core.context.GlobalContext
 
 /**
  * Remote patch source for GitHub Pull Requests.
@@ -27,19 +24,12 @@ class PullRequestPatchSource(
     val owner: String,
     val repo: String,
     val prNumber: String,
-    private val configRepository: ConfigRepository? = null,
+    private val gitHubPatProvider: (suspend () -> String?)? = null,
 ) : GitHubPatchSource(http, "$owner/$repo") {
 
     override val provider: PatchProvider = PatchProvider.GITHUB_PR
 
     private var cachedRelease: Release? = null
-
-    private suspend fun getConfig(): AppConfig {
-        val repo = configRepository
-            ?: runCatching { GlobalContext.get().get<ConfigRepository>() }.getOrNull()
-            ?: ConfigRepository()
-        return repo.loadConfig()
-    }
 
     override suspend fun listReleases(): Result<List<Release>> = withContext(Dispatchers.IO) {
         try {
@@ -65,12 +55,10 @@ class PullRequestPatchSource(
         }
     }
 
-    private suspend fun getGitHubPat(): String? {
-        val config = getConfig()
-        return config.gitHubPat.trim().takeIf { it.isNotEmpty() }
+    private suspend fun getGitHubPat(): String? =
+        gitHubPatProvider?.invoke()?.trim()?.takeIf { it.isNotEmpty() }
             ?: System.getenv("GITHUB_TOKEN")?.trim()?.takeIf { it.isNotEmpty() }
             ?: System.getenv("GH_TOKEN")?.trim()?.takeIf { it.isNotEmpty() }
-    }
 
     private suspend fun resolvePrRelease(): Release {
         val pat = getGitHubPat()

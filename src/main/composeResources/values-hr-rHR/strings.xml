@@ -797,4 +797,6 @@ Ponovno odaberite APK za ponovno krpanje sa svojim spremljenim postavkama</strin
     <string name="changelog_dialog_title">Prikaži popis promjena</string>
     <string name="changelog_show_older_button">Pokaži starije verzije</string>
     <string name="changelog_view_on_github_button">Prikaži na GitHubu</string>
+
+    <string name="source_error_download_failed">Nije moguće preuzeti zakrpe: %1$s</string>
 </resources>

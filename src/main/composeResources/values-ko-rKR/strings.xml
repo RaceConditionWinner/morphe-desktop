@@ -776,4 +776,6 @@
     <string name="changelog_dialog_title">변경 로그 보기</string>
     <string name="changelog_show_older_button">이전 릴리스 보기</string>
     <string name="changelog_view_on_github_button">GitHub에서 보기</string>
+
+    <string name="source_error_download_failed">패치를 다운로드할 수 없습니다: %1$s</string>
 </resources>

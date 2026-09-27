@@ -773,4 +773,6 @@
     <string name="changelog_dialog_title">चेंजलॉग देखें</string>
     <string name="changelog_show_older_button">पुरानी रिलीज़ दिखाएँ</string>
     <string name="changelog_view_on_github_button">GitHub पर देखें</string>
+
+    <string name="source_error_download_failed">पैच डाउनलोड नहीं कर सके: %1$s</string>
 </resources>

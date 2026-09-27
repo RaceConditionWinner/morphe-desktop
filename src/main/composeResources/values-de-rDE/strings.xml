@@ -776,4 +776,6 @@ Wähle die APK erneut aus, um mit deinen gespeicherten Einstellungen zu patchen<
     <string name="changelog_dialog_title">Changelog anzeigen</string>
     <string name="changelog_show_older_button">Ältere Versionen anzeigen</string>
     <string name="changelog_view_on_github_button">Auf GitHub ansehen</string>
+
+    <string name="source_error_download_failed">Patches konnten nicht heruntergeladen werden: %1$s</string>
 </resources>

@@ -773,4 +773,6 @@
     <string name="changelog_dialog_title">Visualizza changelog</string>
     <string name="changelog_show_older_button">Mostra versioni precedenti</string>
     <string name="changelog_view_on_github_button">Visualizza su GitHub</string>
+
+    <string name="source_error_download_failed">Impossibile scaricare le patch: %1$s</string>
 </resources>

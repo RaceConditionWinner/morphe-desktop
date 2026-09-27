@@ -79,6 +79,7 @@ fun SettingsDialogHost() {
     var disableStockLinksAfterInstall by remember { mutableStateOf(false) }
     var developerOptions by remember { mutableStateOf(false) }
     var gitHubPat by remember { mutableStateOf("") }
+    var savedGitHubPat by remember { mutableStateOf("") }
 
     LaunchedEffect(showSettingsDialog) {
         if (showSettingsDialog) {
@@ -98,6 +99,7 @@ fun SettingsDialogHost() {
             disableStockLinksAfterInstall = config.disableStockLinksAfterInstall
             developerOptions = config.developerOptions
             gitHubPat = config.gitHubPat
+            savedGitHubPat = config.gitHubPat
             // Resolve the smart-default if the user has never picked a channel
             // (returns DEV when the running build is dev, STABLE otherwise).
             updateChannelPreference = configRepository.getOrInitUpdateChannelPreference(
@@ -138,6 +140,11 @@ fun SettingsDialogHost() {
             },
             onDismiss = {
                 showSettingsDialog = false
+                val normalizedPat = gitHubPat.trim()
+                if (normalizedPat != savedGitHubPat) {
+                    savedGitHubPat = normalizedPat
+                    scope.launch { configRepository.setGitHubPat(normalizedPat) }
+                }
                 onDismiss()
             },
             isPatching = isPatching,
@@ -202,7 +209,6 @@ fun SettingsDialogHost() {
             gitHubPat = gitHubPat,
             onGitHubPatChange = { pat ->
                 gitHubPat = pat
-                scope.launch { configRepository.setGitHubPat(pat) }
             },
             customAccentColorArgb = customAccentColorArgb,
             onCustomAccentColorChange = {

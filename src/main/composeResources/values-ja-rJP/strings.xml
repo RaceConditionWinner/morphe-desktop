@@ -773,4 +773,6 @@
     <string name="changelog_dialog_title">変更履歴を表示</string>
     <string name="changelog_show_older_button">過去のリリースを表示</string>
     <string name="changelog_view_on_github_button">GitHubで表示</string>
+
+    <string name="source_error_download_failed">パッチをダウンロードできませんでした: %1$s</string>
 </resources>

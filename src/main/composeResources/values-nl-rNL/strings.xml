@@ -773,4 +773,6 @@
     <string name="changelog_dialog_title">Changelog bekijken</string>
     <string name="changelog_show_older_button">Oudere versies weergeven</string>
     <string name="changelog_view_on_github_button">Bekijken op GitHub</string>
+
+    <string name="source_error_download_failed">Kon patches niet downloaden: %1$s</string>
 </resources>

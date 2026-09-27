@@ -773,4 +773,6 @@
     <string name="changelog_dialog_title">Zobacz listę zmian</string>
     <string name="changelog_show_older_button">Pokaż starsze wersje</string>
     <string name="changelog_view_on_github_button">Wyświetl na GitHubie</string>
+
+    <string name="source_error_download_failed">Nie udało się pobrać modyfikacji: %1$s</string>
 </resources>

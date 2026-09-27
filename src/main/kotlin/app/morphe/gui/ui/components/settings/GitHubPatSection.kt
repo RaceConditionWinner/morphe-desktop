@@ -102,7 +102,7 @@ internal fun GitHubPatSection(
                         value = localPat,
                         onValueChange = {
                             localPat = it
-                            onGitHubPatChange(it.trim())
+                            onGitHubPatChange(it)
                         },
                         placeholder = "ghp_xxxxxxxxxxxxxxx",
                         font = font,

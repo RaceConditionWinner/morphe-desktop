@@ -773,4 +773,6 @@
     <string name="changelog_dialog_title">ดูบันทึกการเปลี่ยนแปลง</string>
     <string name="changelog_show_older_button">แสดงรีลีสที่เก่ากว่า</string>
     <string name="changelog_view_on_github_button">ดูบน GitHub</string>
+
+    <string name="source_error_download_failed">ไม่สามารถดาวน์โหลดแพตช์: %1$s</string>
 </resources>

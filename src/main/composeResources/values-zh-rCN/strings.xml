@@ -773,4 +773,6 @@
     <string name="changelog_dialog_title">查看更新日志</string>
     <string name="changelog_show_older_button">显示旧版本</string>
     <string name="changelog_view_on_github_button">在 GitHub 上查看</string>
+
+    <string name="source_error_download_failed">无法下载补丁：%1$s</string>
 </resources>

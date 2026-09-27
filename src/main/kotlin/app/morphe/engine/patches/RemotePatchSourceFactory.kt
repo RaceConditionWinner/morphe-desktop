@@ -80,22 +80,32 @@ object RemotePatchSourceFactory {
     /**
      * Convenience: parse and instantiate in one shot.
      */
-    fun from(input: String, httpClient: HttpClient): RemotePatchSource? =
-        parse(input)?.instantiate(httpClient)
+    fun from(
+        input: String,
+        httpClient: HttpClient,
+        gitHubPatProvider: (suspend () -> String?)? = null,
+    ): RemotePatchSource? =
+        parse(input)?.instantiate(httpClient, gitHubPatProvider)
 
     /**
      * Build a source for a known provider + repoPath, skipping URL parsing.
      * Used by callers that already have the canonical pieces in hand (e.g.
      * the GUI's PatchSourceManager loading a previously-saved source).
      */
-    fun build(provider: PatchProvider, repoPath: String, httpClient: HttpClient): RemotePatchSource {
+    fun build(
+        provider: PatchProvider,
+        repoPath: String,
+        httpClient: HttpClient,
+        gitHubPatProvider: (suspend () -> String?)? = null,
+    ): RemotePatchSource {
         if (provider == PatchProvider.GITHUB_PR) {
             val match = Regex("([^/]+)/([^/]+)/pull/(\\d+)").find(repoPath)
             if (match != null) {
-                return Parsed(PatchProvider.GITHUB_PR, "${match.groupValues[1]}/${match.groupValues[2]}", prNumber = match.groupValues[3]).instantiate(httpClient)
+                return Parsed(PatchProvider.GITHUB_PR, "${match.groupValues[1]}/${match.groupValues[2]}", prNumber = match.groupValues[3])
+                    .instantiate(httpClient, gitHubPatProvider)
             }
         }
-        return Parsed(provider, repoPath).instantiate(httpClient)
+        return Parsed(provider, repoPath).instantiate(httpClient, gitHubPatProvider)
     }
 
     private fun buildParsed(rawPath: String, provider: PatchProvider): Parsed? {
@@ -122,7 +132,10 @@ object RemotePatchSourceFactory {
                 PatchProvider.GITHUB_PR -> "https://github.com/$repoPath/pull/$prNumber"
             }
 
-        fun instantiate(httpClient: HttpClient): RemotePatchSource {
+        fun instantiate(
+            httpClient: HttpClient,
+            gitHubPatProvider: (suspend () -> String?)? = null,
+        ): RemotePatchSource {
             // Wrap the shared client in the centralized service so all sources
             // get identical request/stream/retry behavior. Call sites still pass
             // an HttpClient, so nothing downstream changes.
@@ -134,7 +147,13 @@ object RemotePatchSourceFactory {
                     val parts = repoPath.split('/')
                     val owner = parts.getOrNull(0) ?: ""
                     val repo = parts.getOrNull(1) ?: ""
-                    PullRequestPatchSource(service, owner, repo, prNumber ?: "")
+                    PullRequestPatchSource(
+                        service,
+                        owner,
+                        repo,
+                        prNumber ?: "",
+                        gitHubPatProvider,
+                    )
                 }
             }
         }

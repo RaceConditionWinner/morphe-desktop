@@ -773,4 +773,6 @@
     <string name="changelog_dialog_title">Näytä muutosloki</string>
     <string name="changelog_show_older_button">Näytä vanhemmat julkaisut</string>
     <string name="changelog_view_on_github_button">Näytä GitHubissa</string>
+
+    <string name="source_error_download_failed">Paikkausten lataus epäonnistui: %1$s</string>
 </resources>

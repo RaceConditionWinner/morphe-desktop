@@ -773,4 +773,6 @@
     <string name="changelog_dialog_title">Lihat changelog</string>
     <string name="changelog_show_older_button">Tampilkan rilis yang lebih lama</string>
     <string name="changelog_view_on_github_button">Lihat di GitHub</string>
+
+    <string name="source_error_download_failed">Tidak dapat mengunduh tambalan: %1$s</string>
 </resources>

@@ -773,4 +773,6 @@
     <string name="changelog_dialog_title">הצג יומן שינויים</string>
     <string name="changelog_show_older_button">הצג מהדורות ישנות יותר</string>
     <string name="changelog_view_on_github_button">הצג ב-GitHub</string>
+
+    <string name="source_error_download_failed">לא ניתן היה להוריד טלאים: %1$s</string>
 </resources>

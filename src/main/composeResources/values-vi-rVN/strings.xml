@@ -773,4 +773,6 @@
     <string name="changelog_dialog_title">Xem nhật ký thay đổi</string>
     <string name="changelog_show_older_button">Các bản phát hành cũ</string>
     <string name="changelog_view_on_github_button">Xem trên GitHub</string>
+
+    <string name="source_error_download_failed">Không thể tải xuống các bản vá: %1$s</string>
 </resources>

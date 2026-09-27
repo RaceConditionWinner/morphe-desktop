@@ -156,6 +156,7 @@ class PatchSourceManager(
             PatchProvider.GITHUB,
             "MorpheApp/morphe-patches",
             httpClient,
+            gitHubPatProvider = { configRepository.getGitHubPat() },
         )
         return PatchRepository(remote)
     }
@@ -178,7 +179,11 @@ class PatchSourceManager(
 
         return repositories.getOrPut(source.id) {
             val remote = if (!source.url.isNullOrBlank()) {
-                RemotePatchSourceFactory.from(source.url, httpClient)
+                RemotePatchSourceFactory.from(
+                    source.url,
+                    httpClient,
+                    gitHubPatProvider = { configRepository.getGitHubPat() },
+                )
             } else null
 
             val finalRemote = remote ?: run {
@@ -189,7 +194,12 @@ class PatchSourceManager(
                     PatchSourceType.GITLAB -> PatchProvider.GITLAB
                     else -> PatchProvider.GITHUB
                 }
-                RemotePatchSourceFactory.build(provider, repoPath, httpClient)
+                RemotePatchSourceFactory.build(
+                    provider,
+                    repoPath,
+                    httpClient,
+                    gitHubPatProvider = { configRepository.getGitHubPat() },
+                )
             }
             Logger.info("Creating PatchRepository for source '${source.name}' (repo=${finalRemote.repoPath}, provider=${finalRemote.provider})")
             PatchRepository(finalRemote)

@@ -188,6 +188,7 @@ class HttpService(
 
         var page = 1
         var matchingRun: GitHubWorkflowRun? = null
+        var matchingShaRun: GitHubWorkflowRun? = null
 
         while (page <= 10) {
             val runsUrl = "https://api.github.com/repos/$owner/$repo/actions/runs?per_page=100&page=$page"
@@ -201,13 +202,23 @@ class HttpService(
                 }
             }
 
-            matchingRun = runs.workflowRuns.firstOrNull { it.headSha == targetSha }
+            val matchingRuns = runs.workflowRuns.filter { it.headSha == targetSha }
+            matchingShaRun = matchingShaRun ?: matchingRuns.firstOrNull()
+            matchingRun = matchingRuns.firstOrNull {
+                it.status.equals("completed", ignoreCase = true) &&
+                    it.conclusion.equals("success", ignoreCase = true)
+            }
             if (matchingRun != null) break
             if (runs.workflowRuns.isEmpty()) break
             page++
         }
 
         val run = matchingRun
+            ?: matchingShaRun?.let {
+                throw IllegalStateException(
+                    "GitHub Actions run for PR #$pullRequestNumber (SHA: $targetSha) is not completed successfully"
+                )
+            }
             ?: throw IllegalStateException("No GitHub Actions run found for PR #$pullRequestNumber (SHA: $targetSha)")
 
         val artifactsUrl = "https://api.github.com/repos/$owner/$repo/actions/runs/${run.id}/artifacts"
@@ -223,8 +234,9 @@ class HttpService(
 
         val artifact = artifactsResponse.artifacts.firstOrNull {
             it.name.contains("patch", ignoreCase = true) || it.name.endsWith(".mpp", ignoreCase = true)
-        } ?: artifactsResponse.artifacts.firstOrNull()
-            ?: throw IllegalStateException("No artifacts found for PR #$pullRequestNumber - did the GitHub Action run successfully?")
+        } ?: throw IllegalStateException(
+            "No patch artifact found for PR #$pullRequestNumber - did the GitHub Action publish the .mpp artifact?"
+        )
 
         return GitHubPrAsset(
             downloadUrl = artifact.archiveDownloadUrl,
@@ -308,7 +320,7 @@ class HttpService(
                                 }
                             } else {
                                 response.bodyAsChannel().toInputStream().use { input ->
-                                    copyStreaming(input, out, contentLength, onProgress)
+                                    copyStreaming(input, out, null, contentLength, url, onProgress)
                                 }
                             }
                         }
@@ -497,6 +509,8 @@ private data class GitHubPull(
 private data class GitHubWorkflowRun(
     val id: Long = 0L,
     @SerialName("head_sha") val headSha: String = "",
+    val status: String? = null,
+    val conclusion: String? = null,
     @SerialName("display_title") val displayTitle: String? = null,
 )
 

@@ -773,4 +773,6 @@
     <string name="changelog_dialog_title">চেঞ্জলগ দেখুন</string>
     <string name="changelog_show_older_button">পুরানো রিলিজ দেখান</string>
     <string name="changelog_view_on_github_button">GitHub-এ দেখুন</string>
+
+    <string name="source_error_download_failed">প্যাচ ডাউনলোড করা যায়নি: %1$s</string>
 </resources>

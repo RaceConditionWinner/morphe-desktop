@@ -776,4 +776,6 @@
     <string name="changelog_dialog_title">Прикажи дневник измена</string>
     <string name="changelog_show_older_button">Прикажи старија издања</string>
     <string name="changelog_view_on_github_button">Прикажи на GitHub-у</string>
+
+    <string name="source_error_download_failed">Преузимање закрпа није успело: %1$s</string>
 </resources>

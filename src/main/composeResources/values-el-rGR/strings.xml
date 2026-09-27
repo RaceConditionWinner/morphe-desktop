@@ -773,4 +773,6 @@
     <string name="changelog_dialog_title">Προβολή αρχείου αλλαγών</string>
     <string name="changelog_show_older_button">Εμφάνιση παλαιότερων εκδόσεων</string>
     <string name="changelog_view_on_github_button">Προβολή στο GitHub</string>
+
+    <string name="source_error_download_failed">Δεν ήτ αν δυνατή η λήψη patches: %1$s</string>
 </resources>

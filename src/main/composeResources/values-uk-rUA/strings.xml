@@ -773,4 +773,6 @@
     <string name="changelog_dialog_title">Переглянути журнал змін</string>
     <string name="changelog_show_older_button">Показати старіші релізи</string>
     <string name="changelog_view_on_github_button">Переглянути на GitHub</string>
+
+    <string name="source_error_download_failed">Не вдалося завантажити патчі: %1$s</string>
 </resources>

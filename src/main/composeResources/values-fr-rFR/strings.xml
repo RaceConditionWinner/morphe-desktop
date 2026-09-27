@@ -775,4 +775,6 @@
     <string name="changelog_dialog_title">Voir le journal des modifications</string>
     <string name="changelog_show_older_button">Chargement des versions antérieures</string>
     <string name="changelog_view_on_github_button">Voir sur GitHub</string>
+
+    <string name="source_error_download_failed">Impossible de télécharger les patchs : %1$s</string>
 </resources>

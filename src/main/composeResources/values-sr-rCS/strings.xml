@@ -773,4 +773,6 @@
     <string name="changelog_dialog_title">Prikaži dnevnik promena</string>
     <string name="changelog_show_older_button">Prikaži starija izdanja</string>
     <string name="changelog_view_on_github_button">Prikaži na GitHub-u</string>
+
+    <string name="source_error_download_failed">Preuzimanje zakrpa nije uspelo: %1$s</string>
 </resources>

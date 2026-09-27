@@ -773,4 +773,6 @@
     <string name="changelog_dialog_title">Prikaži dnevnik sprememb</string>
     <string name="changelog_show_older_button">Prikaži starejše izdaje</string>
     <string name="changelog_view_on_github_button">Prikaži na GitHubu</string>
+
+    <string name="source_error_download_failed">Ni bilo mogoče prenesti popravkov: %1$s</string>
 </resources>

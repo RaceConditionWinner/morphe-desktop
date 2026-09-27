@@ -797,4 +797,6 @@ Selecciona el APK de nuevo para volver a parchear con tus ajustes guardados</str
     <string name="changelog_dialog_title">Ver registro de cambios</string>
     <string name="changelog_show_older_button">Mostrar versiones anteriores</string>
     <string name="changelog_view_on_github_button">Ver en GitHub</string>
+
+    <string name="source_error_download_failed">No se pudieron descargar los parches: %1$s</string>
 </resources>

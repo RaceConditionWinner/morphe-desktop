@@ -773,4 +773,6 @@
     <string name="changelog_dialog_title">Skoða breytingaskrá</string>
     <string name="changelog_show_older_button">Sýna eldri útgáfur</string>
     <string name="changelog_view_on_github_button">Skoða á GitHub</string>
+
+    <string name="source_error_download_failed">Ekki var hægt að sækja plástra: %1$s</string>
 </resources>

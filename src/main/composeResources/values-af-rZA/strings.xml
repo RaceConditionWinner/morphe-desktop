@@ -773,4 +773,6 @@
     <string name="changelog_dialog_title">Bekyk veranderingslog</string>
     <string name="changelog_show_older_button">Wys ouer vrystellings</string>
     <string name="changelog_view_on_github_button">Bekyk op GitHub</string>
+
+    <string name="source_error_download_failed">Kon nie patches aflaai nie: %1$s</string>
 </resources>

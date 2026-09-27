@@ -1,3 +1,24 @@
+# [1.17.0-dev.9](https://github.com/MorpheApp/morphe-desktop/compare/v1.17.0-dev.8...v1.17.0-dev.9) (2026-09-23)
+
+
+### Bug Fixes
+
+* Update to latest Patcher ([b63abb5](https://github.com/MorpheApp/morphe-desktop/commit/b63abb5c6c6f15b3ac9424461850457af0cd4014))
+
+# [1.17.0-dev.8](https://github.com/MorpheApp/morphe-desktop/compare/v1.17.0-dev.7...v1.17.0-dev.8) (2026-09-22)
+
+
+### Features
+
+* Add GitHub Pull Request patch sources and PAT configuration ([#322](https://github.com/MorpheApp/morphe-desktop/issues/322)) ([47a70db](https://github.com/MorpheApp/morphe-desktop/commit/47a70db674325eba0bf7dac3c605da54596220fe))
+
+# [1.17.0-dev.7](https://github.com/MorpheApp/morphe-desktop/compare/v1.17.0-dev.6...v1.17.0-dev.7) (2026-09-21)
+
+
+### Bug Fixes
+
+* Trigger background completion effect on Expert Mode ([#323](https://github.com/MorpheApp/morphe-desktop/issues/323)) ([3f06f3e](https://github.com/MorpheApp/morphe-desktop/commit/3f06f3e7605985585ce3ac8d9e626a24c9e64607))
+
 # [1.17.0-dev.6](https://github.com/MorpheApp/morphe-desktop/compare/v1.17.0-dev.5...v1.17.0-dev.6) (2026-09-20)
 
 

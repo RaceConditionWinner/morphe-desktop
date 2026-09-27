@@ -774,4 +774,6 @@
     <string name="changelog_dialog_title">Değişiklik günlüğünü görüntüle</string>
     <string name="changelog_show_older_button">Daha eski sürümleri göster</string>
     <string name="changelog_view_on_github_button">GitHub'da görüntüle</string>
+
+    <string name="source_error_download_failed">Yamalar indirilemedi: %1$s</string>
 </resources>

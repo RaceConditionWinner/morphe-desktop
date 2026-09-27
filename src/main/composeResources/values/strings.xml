@@ -953,4 +953,6 @@
     <string name="changelog_for_app">%1$s changelog</string>
     <string name="changelog_release_page">Release page</string>
     <string name="installed_info_no_scoped_changelog">No changes specific to this app in this release.</string>
+
+    <string name="source_error_download_failed">Could not download patches: %1$s</string>
 </resources>

@@ -773,4 +773,6 @@
     <string name="changelog_dialog_title">Vis endringslogg</string>
     <string name="changelog_show_older_button">Vis eldre utgivelser</string>
     <string name="changelog_view_on_github_button">Vis på GitHub</string>
+
+    <string name="source_error_download_failed">Kunne ikke laste ned patcher: %1$s</string>
 </resources>

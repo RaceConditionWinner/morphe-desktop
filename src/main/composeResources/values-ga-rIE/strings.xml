@@ -773,4 +773,6 @@
     <string name="changelog_dialog_title">Féach ar an loga athruithe</string>
     <string name="changelog_show_older_button">Taispeáin eisiúintí níos sine</string>
     <string name="changelog_view_on_github_button">Féach ar GitHub</string>
+
+    <string name="source_error_download_failed">Níorbh fhéidir paistí a íoslódáil: %1$s</string>
 </resources>

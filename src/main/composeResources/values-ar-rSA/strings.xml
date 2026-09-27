@@ -773,4 +773,6 @@
     <string name="changelog_dialog_title">عرض سجل التغييرات</string>
     <string name="changelog_show_older_button">عرض الإصدارات الأقدم</string>
     <string name="changelog_view_on_github_button">عرض على GitHub</string>
+
+    <string name="source_error_download_failed">تعذّر تنزيل التصحيحات: %1$s</string>
 </resources>
