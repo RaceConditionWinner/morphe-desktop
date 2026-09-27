@@ -669,6 +669,43 @@ class AdbManager {
     }
 
     /**
+     * Package name to its APK's on-device install path, from `pm list packages -f` —
+     * one bulk call, same cost as [listInstalledPackages]. The path is worth having
+     * on top of the bare name: Android assigns each (re)install a freshly randomized
+     * install directory, so the path for a given package changes across essentially
+     * every install operation, including an in-place reinstall that leaves the
+     * package name, version, and even the signature looking unchanged. That makes it
+     * a cheap way to notice "something happened to this install" without paying for
+     * a `dumpsys package` — the actually expensive call — just to find out.
+     */
+    suspend fun listInstalledPackagesWithPaths(deviceId: String): Result<Map<String, String>> = withContext(Dispatchers.IO) {
+        val adb = findAdb() ?: return@withContext Result.failure(AdbException("ADB binary not found", Res.string.adb_error_not_found))
+        try {
+            val process = ProcessBuilder(adb, "-s", deviceId, "shell", "pm", "list", "packages", "-f")
+                .redirectErrorStream(true).start()
+            val out = process.inputStream.bufferedReader().readText()
+            process.waitFor()
+            if (process.exitValue() != 0) return@withContext Result.failure(AdbException("Failed to list packages: exit code ${process.exitValue()}", Res.string.adb_error_pm_list_packages, listOf("exit code ${process.exitValue()}")))
+            // Each line: package:/data/app/~~hash==/pkg.name-hash==/base.apk=pkg.name
+            // The path may itself contain '=', so split on the LAST one only.
+            val packages = out.lineSequence()
+                .map { it.trim() }
+                .filter { it.startsWith("package:") }
+                .map { it.removePrefix("package:").trim() }
+                .filter { it.isNotBlank() }
+                .mapNotNull { line ->
+                    val split = line.lastIndexOf('=')
+                    if (split <= 0 || split == line.lastIndex) null
+                    else line.substring(split + 1) to line.substring(0, split)
+                }
+                .toMap()
+            Result.success(packages)
+        } catch (e: Exception) {
+            Result.failure(AdbException("Error listing packages: ${e.message ?: ""}", Res.string.adb_error_pm_list_packages, listOf(e.message ?: ""), cause = e))
+        }
+    }
+
+    /**
      * Everything one `dumpsys package` call can say about [pkg] on [deviceId], or
      * null when the package is not there to be dumped.
      *

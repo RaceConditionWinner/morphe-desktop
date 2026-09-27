@@ -10,7 +10,6 @@ import io.ktor.http.encodeURLParameter
 import java.net.HttpURLConnection
 import java.net.SocketTimeoutException
 import java.net.URI
-import java.net.URL
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

@@ -5,6 +5,7 @@
 
 package app.morphe.gui.data.repository
 
+import app.morphe.engine.util.AtomicFiles
 import app.morphe.engine.util.PortablePaths
 import app.morphe.gui.data.model.AppConfig
 import app.morphe.gui.data.model.DEFAULT_PATCH_SOURCE
@@ -67,7 +68,21 @@ class ConfigRepository {
                 default
             }
         } catch (e: Exception) {
-            Logger.error("Failed to load config, using defaults", e)
+            // Corrupt/incompatible config: every patch source, preference and saved
+            // choice lives in this one file, so silently overwriting it with defaults
+            // on the next save would be the worst possible answer to a read failure.
+            // Move it aside first — same recovery contract as PatchedAppStore and
+            // OriginalApkRepository — so whatever is still readable in it survives
+            // for the user or a future migration to recover from.
+            val preserved = runCatching { AtomicFiles.quarantine(configFile) }.getOrNull()
+            Logger.error(
+                if (preserved != null) {
+                    "Failed to load config (${e.message}); preserved it as ${preserved.name} and starting from defaults"
+                } else {
+                    "Failed to load config (${e.message}); could not preserve the original, starting from defaults"
+                },
+                e,
+            )
             AppConfig()
         }
     }
@@ -79,7 +94,10 @@ class ConfigRepository {
         try {
             val configFile = FileUtils.getConfigFile()
             val content = json.encodeToString(AppConfig.serializer(), config)
-            configFile.writeText(content)
+            // Durable write, matching every other store in this app: a crash mid-write
+            // must never leave this file — the source of every setting Morphe has —
+            // truncated or unreadable.
+            AtomicFiles.write(configFile, content)
             cachedConfig = config
             Logger.info("Config saved to ${configFile.absolutePath}")
         } catch (e: Exception) {

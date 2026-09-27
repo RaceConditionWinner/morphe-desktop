@@ -21,7 +21,14 @@ object DeviceMonitor {
     private val _state = MutableStateFlow(DeviceMonitorState())
     val state: StateFlow<DeviceMonitorState> = _state.asStateFlow()
 
-    private val adbManager = AdbManager()
+    /**
+     * The one [AdbManager] the whole app shares. Exposed (not private) so Koin's
+     * registration for [AdbManager] resolves to this exact instance rather than a
+     * second, disconnected one — [AdbManager] tracks daemon-ownership state
+     * (`weStartedDaemon`) that is only coherent when every caller reads and
+     * writes the same object.
+     */
+    val adbManager = AdbManager()
     private var pollingJob: Job? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 

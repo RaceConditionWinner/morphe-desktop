@@ -188,9 +188,12 @@ fun HomeScreenContent(
 
     detailItem?.let { item ->
         val record = item.record ?: return@let
-        // Pure map work over data already in memory, keyed so it is redone only
-        // when the record or the loaded sources actually change.
-        val appliedBundles = remember(record, uiState.supportedApps) {
+        // Pure map work over data already in memory, keyed so it is redone whenever
+        // the record, the loaded sources (a rename invalidates the bundle titles
+        // this maps to), or the supported-app list actually change. allSources was
+        // missing from this key: renaming a source in SourceDetailsDialog while this
+        // dialog was open behind it left the old name memoized here indefinitely.
+        val appliedBundles = remember(record, uiState.supportedApps, allSources) {
             viewModel.appliedBundles(record)
         }
         var mutedSourceIds by remember(item.id) { mutableStateOf<Set<String>>(emptySet()) }

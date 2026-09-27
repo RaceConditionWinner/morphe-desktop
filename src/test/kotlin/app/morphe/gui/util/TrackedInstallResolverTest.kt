@@ -8,10 +8,13 @@ package app.morphe.gui.util
 import app.morphe.engine.model.PatchedAppRecord
 import app.morphe.engine.util.FileChecksum
 import java.io.File
+import java.io.IOException
 import java.nio.file.Files
+import kotlinx.coroutines.CancellationException
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -322,5 +325,44 @@ class VerifyArtifactTest {
         file.setLastModified(bumpedMtime)
 
         assertEquals(PatchedArtifactState.MODIFIED, resolver.verifyArtifact(record, file))
+    }
+
+    @Test
+    fun `a hash that fails to compute is reported unverified, never as present`() {
+        // A same-size match that should trigger a hash check, but the hash itself
+        // can't be read — an I/O error, a permissions problem, anything short of
+        // an actual mismatch. Reporting PRESENT here would claim a check that
+        // never actually happened; reporting MODIFIED would claim a mismatch that
+        // was never actually found either. UNVERIFIED is the only honest answer.
+        val file = File(dir, "f.apk").apply { writeBytes(ByteArray(64) { 9 }) }
+        val record = recordFor(file, FileChecksum.sha256(file))
+
+        val result = resolver.verifyArtifact(record, file, hash = { throw IOException("disk read error") })
+
+        assertEquals(PatchedArtifactState.UNVERIFIED, result)
+    }
+
+    @Test
+    fun `a failed hash is not cached, so the next read gets a real answer`() {
+        val file = File(dir, "g.apk").apply { writeBytes(ByteArray(64) { 10 }) }
+        val record = recordFor(file, FileChecksum.sha256(file))
+
+        val failed = resolver.verifyArtifact(record, file, hash = { throw IOException("disk read error") })
+        assertEquals(PatchedArtifactState.UNVERIFIED, failed)
+
+        // Same (size, mtime) as the failed attempt — if the failure had been cached
+        // this would still read UNVERIFIED back rather than actually re-hashing
+        val recovered = resolver.verifyArtifact(record, file)
+        assertEquals(PatchedArtifactState.PRESENT, recovered)
+    }
+
+    @Test
+    fun `cancellation during hashing is not swallowed as a failure`() {
+        val file = File(dir, "h.apk").apply { writeBytes(ByteArray(64) { 11 }) }
+        val record = recordFor(file, FileChecksum.sha256(file))
+
+        assertFailsWith<CancellationException> {
+            resolver.verifyArtifact(record, file, hash = { throw CancellationException("cancelled") })
+        }
     }
 }

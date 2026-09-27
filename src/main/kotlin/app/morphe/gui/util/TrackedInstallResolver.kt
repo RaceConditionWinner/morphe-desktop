@@ -47,6 +47,15 @@ enum class PatchedArtifactState {
 
     /** Gone from disk, so the record has outlived the build it describes. */
     MISSING,
+
+    /**
+     * Same size as the file Morphe wrote, but the content hash could not be
+     * computed (an I/O error, a permissions problem, or similar) — so nothing
+     * confirms it is actually unchanged. Deliberately distinct from [PRESENT]:
+     * a failed check is not a passed one, and reporting it as [PRESENT] would
+     * claim confidence the read never established.
+     */
+    UNVERIFIED,
 }
 
 /** Everything one tracked record's actions need to know, resolved in one pass. */
@@ -199,16 +208,20 @@ class TrackedInstallResolver(
         deviceId: String?,
         morpheSignatureIds: Set<String>,
     ): TrackedInstallSnapshot = withContext(Dispatchers.IO) {
-        // One `pm list packages` for the whole history rather than one per record.
+        // One `pm list packages -f` for the whole history rather than one per record.
         // A device that cannot be listed is treated as absent: claiming every app
-        // was uninstalled because a single ADB call failed is the worse answer.
-        val installedPackages = deviceId?.let { id ->
-            adbManager.listInstalledPackages(id).getOrElse { e ->
+        // was uninstalled because a single ADB call failed is the worse answer. The
+        // path alongside each name is what lets fingerprint() notice an in-place
+        // reinstall — see listInstalledPackagesWithPaths — for the same one-call cost
+        // as the bare list this used to be.
+        val installedPackagePaths = deviceId?.let { id ->
+            adbManager.listInstalledPackagesWithPaths(id).getOrElse { e ->
                 Logger.debug("Could not list packages on $id (${e.message}); treating the device as unavailable")
                 null
             }
         }
-        val attached = installedPackages != null
+        val installedPackages = installedPackagePaths?.keys
+        val attached = installedPackagePaths != null
         val morpheInstallers = adbManager.morpheInstallerCandidates()
         val signatureKey = morpheSignatureIds.sorted().joinToString(",")
 
@@ -217,7 +230,8 @@ class TrackedInstallResolver(
             val output = File(record.outputApkPath)
             val devicePackage = record.installedPackageName
             val packageInstalled = installedPackages?.contains(devicePackage) == true
-            val fingerprint = fingerprint(record, deviceId, packageInstalled, output, signatureKey)
+            val installPath = installedPackagePaths?.get(devicePackage)
+            val fingerprint = fingerprint(record, deviceId, packageInstalled, installPath, output, signatureKey)
             val now = System.currentTimeMillis()
             val hit = synchronized(cache) {
                 cache[record.trackingKey]?.takeIf {
@@ -296,8 +310,18 @@ class TrackedInstallResolver(
      * with no stored hash (written before [PatchedAppRecord.outputApkSha256]
      * existed) is left at whatever [resolveArtifactState] alone can say, exactly
      * as it always was.
+     *
+     * [hash] defaults to the real [FileChecksum.sha256] and exists only so a test
+     * can substitute a failing one — a read failure is otherwise awkward to cause
+     * deterministically and portably (permission bits do not stop a process
+     * running as root from reading its own file, which is exactly how this runs
+     * in most CI containers) without faking the filesystem itself.
      */
-    internal fun verifyArtifact(record: PatchedAppRecord, file: File): PatchedArtifactState {
+    internal fun verifyArtifact(
+        record: PatchedAppRecord,
+        file: File,
+        hash: (File) -> String = FileChecksum::sha256,
+    ): PatchedArtifactState {
         val bySize = resolveArtifactState(file, record.outputApkSize)
         if (bySize != PatchedArtifactState.PRESENT) return bySize
 
@@ -314,14 +338,18 @@ class TrackedInstallResolver(
         }
 
         val matches = try {
-            FileChecksum.sha256(file).equals(expectedHash, ignoreCase = true)
+            hash(file).equals(expectedHash, ignoreCase = true)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            // Couldn't read it to be sure either way — the size already matched,
-            // which is the most that can be said without a working hash
-            Logger.debug("Could not hash ${file.name} to verify it (${e.message}); trusting the size match")
-            return PatchedArtifactState.PRESENT
+            // Couldn't read it to be sure either way — the size already matched, but a
+            // failed check is not a passed one, so this must not report PRESENT. Left
+            // out of artifactCache (unlike a real verdict below): the failure is most
+            // likely transient, and the next resolve() — at most CACHE_TTL_MS later,
+            // since the outer cache still remembers this verdict — gets a real answer
+            // instead of a failure pinned at this (size, mtime) forever.
+            Logger.debug("Could not hash ${file.name} to verify it (${e.message}); reporting unverified")
+            return PatchedArtifactState.UNVERIFIED
         }
         synchronized(artifactCache) {
             artifactCache[record.trackingKey] = ArtifactVerification(size, mtime, matches)
@@ -331,14 +359,18 @@ class TrackedInstallResolver(
 
     /**
      * Everything that can change what [resolve] answers, read without a further
-     * device call. Package presence comes from the one `pm list packages` above,
-     * so an install or uninstall made outside Morphe invalidates the verdict on
-     * its own; only a same-package in-place update needs [invalidateAll].
+     * device call. Package presence comes from the one `pm list packages -f` above,
+     * so an install or uninstall made outside Morphe invalidates the verdict on its
+     * own — and so does an in-place reinstall of the same package: [installPath] is
+     * that install's on-device directory, which Android randomizes fresh on every
+     * (re)install, so it changes even when the package name, version, and apparent
+     * signature would not otherwise look any different to this cheap a check.
      */
     private fun fingerprint(
         record: PatchedAppRecord,
         deviceId: String?,
         packageInstalled: Boolean,
+        installPath: String?,
         output: File,
         signatureKey: String,
     ): String = buildString {
@@ -348,6 +380,7 @@ class TrackedInstallResolver(
         append(record.apkVersion).append('|')
         append(record.patchedAt).append('|')
         append(output.length()).append(':').append(output.lastModified()).append('|')
+        append(installPath).append('|')
         append(signatureKey)
     }
 }

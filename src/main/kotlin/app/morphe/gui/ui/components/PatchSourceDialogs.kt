@@ -25,6 +25,7 @@ import app.morphe.engine.patches.RemotePatchSourceFactory
 import app.morphe.gui.data.model.PatchSource
 import app.morphe.gui.data.model.PatchSourceType
 import app.morphe.gui.data.repository.ConfigRepository
+import app.morphe.gui.ui.theme.MorpheOutline
 import app.morphe.gui.ui.theme.LocalMorpheAccents
 import app.morphe.gui.ui.theme.LocalMorpheCorners
 import app.morphe.gui.ui.theme.LocalMorpheDimens
@@ -89,7 +90,7 @@ internal fun AddPatchSourceDialog(
                                 .border(
                                     1.dp,
                                     if (isSelected) accents.primary.copy(alpha = 0.5f)
-                                    else MaterialTheme.colorScheme.outline.copy(alpha = 0.12f),
+                                    else MorpheOutline.subtleColor(),
                                     RoundedCornerShape(corners.small)
                                 )
                                 .background(

@@ -46,7 +46,6 @@ import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -196,8 +195,16 @@ fun InstalledAppInfoDialog(
                     modifier = Modifier
                         .width(dialogWidth)
                         .height(dialogHeight)
-                        // Clicks inside must not reach the scrim that dismisses
-                        .pointerInput(Unit) { detectTapGestures { } },
+                        // Absorbs clicks on the card so they don't fall through to the
+                        // scrim's onDismiss below — a real Modifier.clickable, not a
+                        // hand-rolled pointerInput/detectTapGestures, because the latter
+                        // eagerly consumes the down event ahead of nested children and
+                        // silently ate every click on every button and field inside this
+                        // dialog. clickable is built to nest correctly: a tap that lands
+                        // on an actual control inside still fires that control's own
+                        // handler, only a tap on the card's bare background is swallowed
+                        // here instead of reaching the scrim.
+                        .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {},
                 ) {
                     Row(modifier = Modifier.fillMaxSize()) {
                         ActionRail(
@@ -611,10 +618,18 @@ private fun AppInfoBanners(
             )
         }
         BannerSlot(visible = item.status == HomeAppStatus.UNVERIFIED, entered = entered, index = 1) {
+            // status==UNVERIFIED is reached either because the device install
+            // couldn't be confirmed (checked first in HomeAppItem.status) or,
+            // failing that, because the local artifact's hash couldn't be
+            // checked — two different things that must not share one message.
+            val deviceCause = item.deviceState == DeviceInstallState.UNVERIFIED
             Notice(
                 icon = MorpheIcons.Info,
                 tone = LocalMorpheAccents.current.warning,
-                text = stringResource(Res.string.installed_info_unverified_notice),
+                text = stringResource(
+                    if (deviceCause) Res.string.installed_info_unverified_notice
+                    else Res.string.installed_info_artifact_unverified_notice
+                ),
             )
         }
         BannerSlot(visible = item.status == HomeAppStatus.ARTIFACT_MODIFIED, entered = entered, index = 1) {
@@ -1061,7 +1076,11 @@ private fun AppliedPatchesDialog(
                 color = MaterialTheme.colorScheme.surface,
                 tonalElevation = 8.dp,
                 shadowElevation = 20.dp,
-                modifier = Modifier.width(width).height(height).pointerInput(Unit) { detectTapGestures { } },
+                // See InstalledAppInfoDialog's card above: a real clickable no-op, not a
+                // pointerInput/detectTapGestures sink, so the search field and every
+                // bundle row inside this dialog keep receiving input.
+                modifier = Modifier.width(width).height(height)
+                    .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {},
             ) {
                 Column(modifier = Modifier.fillMaxSize().padding(20.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
@@ -1304,9 +1323,13 @@ private fun BundleChangelogDialog(
                 color = MaterialTheme.colorScheme.surface,
                 tonalElevation = 8.dp,
                 shadowElevation = 20.dp,
+                // See InstalledAppInfoDialog's card above: a real clickable no-op, not a
+                // pointerInput/detectTapGestures sink — this dialog's retry button and
+                // "show older releases" link were silently unclickable under the old
+                // pattern.
                 modifier = Modifier
                     .width(width)
-                    .pointerInput(Unit) { detectTapGestures { } },
+                    .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {},
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {
                     Text(

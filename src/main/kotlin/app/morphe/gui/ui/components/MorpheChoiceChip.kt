@@ -38,6 +38,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.morphe.gui.ui.theme.MorpheOutline
 import app.morphe.gui.ui.theme.LocalMorpheAccents
 import app.morphe.gui.ui.theme.LocalMorpheCorners
 
@@ -62,7 +63,7 @@ fun MorpheChoiceChip(
 
     val borderColor by animateColorAsState(
         when {
-            !enabled -> MaterialTheme.colorScheme.outline.copy(alpha = 0.08f)
+            !enabled -> MorpheOutline.disabledColor()
             active -> tint.copy(alpha = 0.6f)
             isHovered -> tint.copy(alpha = if (accent != null) 0.7f else 0.4f)
             else -> tint.copy(alpha = if (accent != null) 0.45f else 0.2f)

@@ -209,6 +209,11 @@ data class HomeAppItem(
         deviceState == DeviceInstallState.UNVERIFIED -> HomeAppStatus.UNVERIFIED
         deviceState == DeviceInstallState.NOT_INSTALLED -> HomeAppStatus.UNINSTALLED
         artifactState == PatchedArtifactState.MODIFIED -> HomeAppStatus.ARTIFACT_MODIFIED
+        // The file's still the recorded size, but its content hash couldn't be
+        // confirmed — the same "can't vouch for this" badge as an unverified
+        // device install, not the confident ARTIFACT_MODIFIED, and not silently
+        // nothing either.
+        artifactState == PatchedArtifactState.UNVERIFIED -> HomeAppStatus.UNVERIFIED
         else -> HomeAppStatus.NONE
     }
 }

@@ -35,6 +35,7 @@ import app.morphe.gui.ui.components.MorpheCardChip
 import app.morphe.gui.data.model.SupportedApp
 import app.morphe.gui.ui.components.morpheScrollbarStyle
 import app.morphe.gui.ui.icons.MorpheIcons
+import app.morphe.gui.ui.theme.MorpheOutline
 import app.morphe.gui.ui.theme.*
 import app.morphe.gui.util.DownloadUrlResolver.openUrlAndFollowRedirects
 import app.morphe.morphe_desktop.generated.resources.*
@@ -146,7 +147,7 @@ internal fun SupportedAppsRow(
                     val searchInteraction = remember { MutableInteractionSource() }
                     val isSearchFocused by searchInteraction.collectIsFocusedAsState()
                     val searchBorder by animateColorAsState(
-                        if (isSearchFocused) MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)
+                        if (isSearchFocused) MorpheOutline.emphasisOutlineColor()
                         else MaterialTheme.colorScheme.outline.copy(alpha = 0.15f),
                         animationSpec = tween(150)
                     )

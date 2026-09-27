@@ -457,7 +457,7 @@ private fun DeveloperMppExclusionsSection(enabled: Boolean) {
             Modifier
                 .fillMaxWidth()
                 .height(1.dp)
-                .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)),
+                .background(MorpheOutline.subtleColor()),
         )
         Text(
             stringResource(Res.string.source_sheet_ignored_mpp_title),

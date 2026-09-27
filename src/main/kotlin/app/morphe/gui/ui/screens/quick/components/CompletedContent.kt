@@ -32,7 +32,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.morphe.engine.PatchedAppStore
 import app.morphe.gui.LocalAdbPreference
-import app.morphe.gui.data.model.Patch
 import app.morphe.gui.data.repository.ConfigRepository
 import app.morphe.gui.ui.icons.MorpheIcons
 import app.morphe.gui.ui.screens.quick.QuickApkInfo
@@ -64,7 +63,8 @@ internal fun CompletedContent(
     val borderColor = MaterialTheme.colorScheme.outlineVariant
     val outputFile = File(outputPath)
     val scope = rememberCoroutineScope()
-    val adbManager = remember { AdbManager() }
+    // Shared with DeviceMonitor's own polling — see DeviceMonitor.adbManager's doc.
+    val adbManager: AdbManager = koinInject()
     val configRepository: ConfigRepository = koinInject()
     val monitorState by DeviceMonitor.state.collectAsState()
     val adbPreference = LocalAdbPreference.current

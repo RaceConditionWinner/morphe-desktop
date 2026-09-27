@@ -169,6 +169,26 @@ object MorpheOutline {
     @Composable
     fun neutralColor(): Color = MaterialTheme.colorScheme.outline.copy(alpha = badgeBorderAlpha)
 
+    /**
+     * The hairline outline as a plain color — dividers and background tints that want
+     * the same quiet separation as [subtle] but take a bare [Color], not a [BorderStroke].
+     */
+    @Composable
+    fun subtleColor(): Color = MaterialTheme.colorScheme.outline.copy(alpha = hairlineAlpha)
+
+    /** The disabled outline as a plain color, for a `!enabled` branch or a disabled divider. */
+    @Composable
+    fun disabledColor(): Color = MaterialTheme.colorScheme.outline.copy(alpha = disabledBorderAlpha)
+
+    /**
+     * The outline, more visible than [neutralColor], for a hovered or focused control
+     * that should read as "more present" without switching to an accent color. Reuses
+     * [emphasisBorderAlpha]'s number for the same visual weight as [accent]'s border —
+     * just kept on the outline rather than tied to a color that reads as "selected."
+     */
+    @Composable
+    fun emphasisOutlineColor(): Color = MaterialTheme.colorScheme.outline.copy(alpha = emphasisBorderAlpha)
+
     /** The accent outline as a plain color. */
     @Composable
     fun accentColor(color: Color = LocalMorpheAccents.current.primary): Color =

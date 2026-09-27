@@ -36,6 +36,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -68,9 +69,13 @@ import app.morphe.gui.ui.screens.home.HomeAppStatus
 import app.morphe.gui.ui.theme.LocalMorpheCorners
 import app.morphe.gui.ui.theme.LocalMorpheDimens
 import app.morphe.gui.ui.theme.LocalMorpheFont
+import app.morphe.gui.util.AdbManager
+import app.morphe.gui.util.DeviceInstallState
+import app.morphe.gui.util.DeviceMonitor
 import app.morphe.gui.util.DownloadUrlResolver.openUrlAndFollowRedirects
 import app.morphe.gui.util.withVersionPrefix
 import app.morphe.morphe_desktop.generated.resources.*
+import org.koin.compose.koinInject
 import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringResource
 
@@ -235,6 +240,8 @@ internal fun HomeAppCard(
                     SupportedVersionsBody(
                         app = item.supportedApp,
                         patchSourceNames = patchSourceNames,
+                        installedPackageName = item.installedPackageName,
+                        deviceState = item.deviceState,
                     )
                 }
             }
@@ -382,6 +389,8 @@ private fun homeAppCardDescription(item: HomeAppItem, status: HomeAppStatus): St
 private fun SupportedVersionsBody(
     app: SupportedApp,
     patchSourceNames: List<String>,
+    installedPackageName: String,
+    deviceState: DeviceInstallState,
 ) {
     val font = LocalMorpheFont.current
     val ink = LocalAppCardInk.current
@@ -393,6 +402,22 @@ private fun SupportedVersionsBody(
         modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
+        // This app has no Morphe build, but a stock copy may already be on the
+        // device — worth saying up front, since it changes whether fetching a
+        // fresh APK is even necessary. Looked up only now, for only this one
+        // expanded card, never for the whole grid: DeviceInstallState.UNVERIFIED
+        // already told the card the package is present, but not which version,
+        // and getting that means the one ADB call this is not worth paying on
+        // every card just to answer a question most cards will never be asked.
+        if (deviceState == DeviceInstallState.UNVERIFIED) {
+            val onDeviceVersion = rememberUntrackedDeviceVersion(installedPackageName)
+            onDeviceVersion?.let {
+                CardSection(stringResource(Res.string.home_app_row_section_already_installed), ink.chipContent, font) {
+                    MorpheCardChip(text = it.withVersionPrefix())
+                }
+            }
+        }
+
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             VersionCardChip(
                 channelLabel = stringResource(Res.string.version_label_latest_stable),
@@ -448,6 +473,30 @@ private fun SupportedVersionsBody(
             }
         }
     }
+}
+
+/**
+ * The device's own version of [packageName], fetched lazily and only while its
+ * card is expanded — never for a whole grid of untracked apps at once. Restarts
+ * the lookup whenever the package or the selected device changes, and clears
+ * back to null immediately so a stale version from a previously-expanded card
+ * can never flash under a different one; a lost or not-ready device answers
+ * null rather than a wrong or leftover version.
+ */
+@Composable
+private fun rememberUntrackedDeviceVersion(packageName: String): String? {
+    val adbManager = koinInject<AdbManager>()
+    val monitorState by DeviceMonitor.state.collectAsState()
+    val device = monitorState.selectedDevice?.takeIf { it.isReady }
+
+    var version by remember(packageName, device?.id) { mutableStateOf<String?>(null) }
+    LaunchedEffect(packageName, device?.id) {
+        version = null
+        if (device != null) {
+            version = adbManager.getDevicePackageInfo(device.id, packageName)?.versionName
+        }
+    }
+    return version
 }
 
 @Composable

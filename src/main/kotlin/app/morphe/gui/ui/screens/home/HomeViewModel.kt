@@ -75,7 +75,12 @@ class HomeViewModel(
     private val patchedAppStore: PatchedAppStore,
     private val changelogRepository: ChangelogRepository,
     private val originalApkRepository: OriginalApkRepository,
-    private val adbManager: AdbManager = AdbManager(),
+    // Required, not defaulted: a default here is exactly what let this parameter go
+    // missing from its Koin registration (AppModule.kt) without either the compiler
+    // or a test catching it — the ViewModel silently got its own private AdbManager,
+    // disconnected from DeviceMonitor's, instead of the shared one every other
+    // consumer resolves through Koin.
+    private val adbManager: AdbManager,
 ) : ScreenModel {
 
     /**

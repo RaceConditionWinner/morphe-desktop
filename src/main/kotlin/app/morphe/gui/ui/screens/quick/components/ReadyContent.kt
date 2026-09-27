@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.sp
 import app.morphe.gui.data.model.Patch
 import app.morphe.gui.ui.icons.MorpheIcons
 import app.morphe.gui.ui.screens.quick.QuickApkInfo
+import app.morphe.gui.ui.theme.MorpheOutline
 import app.morphe.gui.ui.theme.*
 import app.morphe.gui.util.DeviceMonitor
 import app.morphe.gui.util.FormatUtils
@@ -467,7 +468,7 @@ internal fun ReadyContent(
                                 val searchInteraction = remember { MutableInteractionSource() }
                                 val isSearchFocused by searchInteraction.collectIsFocusedAsState()
                                 val searchBorder by animateColorAsState(
-                                    if (isSearchFocused) MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)
+                                    if (isSearchFocused) MorpheOutline.emphasisOutlineColor()
                                     else MaterialTheme.colorScheme.outline.copy(alpha = 0.15f),
                                     animationSpec = tween(150)
                                 )

@@ -59,6 +59,7 @@ import app.morphe.gui.ui.screens.home.HomeAppItem
 import app.morphe.gui.ui.screens.home.HomeAppSortMode
 import app.morphe.gui.ui.screens.home.comparator
 import app.morphe.gui.ui.screens.home.sortKeys
+import app.morphe.gui.ui.theme.MorpheOutline
 import app.morphe.gui.ui.theme.LocalMorpheAccents
 import app.morphe.gui.ui.theme.LocalMorpheCorners
 import app.morphe.gui.ui.theme.LocalMorpheDimens
@@ -331,7 +332,7 @@ private fun FilterChip(
     val border by animateColorAsState(
         when {
             selected -> accent.copy(alpha = 0.6f)
-            isHovered -> MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)
+            isHovered -> MorpheOutline.emphasisOutlineColor()
             else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)
         },
         tween(150), label = "chip",

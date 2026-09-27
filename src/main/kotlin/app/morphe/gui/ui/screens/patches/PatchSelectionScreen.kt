@@ -64,7 +64,6 @@ import app.morphe.gui.data.model.Patch
 import app.morphe.gui.data.model.PatchOption
 import app.morphe.gui.data.model.PatchOptionType
 import app.morphe.gui.data.repository.ConfigRepository
-import app.morphe.gui.data.repository.CopySelectionCandidate
 import app.morphe.gui.data.repository.PatchSourceManager
 import app.morphe.gui.icon.IconExporter
 import app.morphe.gui.icon.IconStudioDialog
@@ -79,6 +78,7 @@ import app.morphe.gui.ui.components.morpheScrollbarStyle
 import app.morphe.gui.ui.icons.MorpheIcons
 import app.morphe.gui.ui.icons.autoMirrored
 import app.morphe.gui.ui.screens.patching.PatchingScreen
+import app.morphe.gui.ui.theme.MorpheOutline
 import app.morphe.gui.ui.theme.contrastingForeground
 import app.morphe.gui.ui.theme.LocalMorpheAccents
 import app.morphe.gui.ui.theme.LocalMorpheCorners
@@ -1191,7 +1191,7 @@ private fun PatchListItem(
                     when {
                         showOptions -> accents.primary.copy(alpha = 0.5f)
                         isGearHovered -> accents.primary.copy(alpha = 0.3f)
-                        else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)
+                        else -> MorpheOutline.subtleColor()
                     },
                     animationSpec = tween(150)
                 )

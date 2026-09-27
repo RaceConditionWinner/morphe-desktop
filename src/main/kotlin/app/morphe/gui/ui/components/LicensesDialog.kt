@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import app.morphe.gui.ui.icons.MorpheIcons
+import app.morphe.gui.ui.theme.MorpheOutline
 import app.morphe.gui.ui.theme.LocalMorpheAccents
 import app.morphe.gui.ui.theme.LocalMorpheCorners
 import app.morphe.gui.ui.theme.LocalMorpheFont
@@ -66,8 +67,8 @@ internal fun LicensesDialog(onDismiss: () -> Unit) {
     val corners = LocalMorpheCorners.current
     val font = LocalMorpheFont.current
     val accents = LocalMorpheAccents.current
-    val borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)
-    val dividerColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.08f)
+    val borderColor = MorpheOutline.subtleColor()
+    val dividerColor = MorpheOutline.disabledColor()
 
     val libs = remember {
         try {
@@ -280,7 +281,7 @@ private fun LicenseSearchBar(query: String, onQueryChange: (String) -> Unit) {
     val searchFocused = remember { mutableStateOf(false) }
     val searchBorderColor by animateColorAsState(
         if (searchFocused.value) accents.primary.copy(alpha = 0.5f)
-        else MaterialTheme.colorScheme.outline.copy(alpha = 0.12f),
+        else MorpheOutline.subtleColor(),
         animationSpec = tween(150)
     )
 
@@ -705,7 +706,7 @@ private fun NoticeTextDialog(onDismiss: () -> Unit) {
     val corners = LocalMorpheCorners.current
     val font = LocalMorpheFont.current
     val accents = LocalMorpheAccents.current
-    val borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)
+    val borderColor = MorpheOutline.subtleColor()
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -795,7 +796,7 @@ private fun LicenseTextDialog(license: License, onDismiss: () -> Unit) {
     val corners = LocalMorpheCorners.current
     val font = LocalMorpheFont.current
     val accents = LocalMorpheAccents.current
-    val borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)
+    val borderColor = MorpheOutline.subtleColor()
     val content = license.licenseContent?.takeIf { it.isNotBlank() }
 
     Dialog(

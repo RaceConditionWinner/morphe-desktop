@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.morphe.gui.ui.components.MorpheAlertDialog
 import app.morphe.gui.ui.components.handCursor
+import app.morphe.gui.ui.theme.MorpheOutline
 import app.morphe.gui.ui.theme.LocalMorpheCorners
 import app.morphe.gui.ui.theme.LocalMorpheFont
 import app.morphe.gui.util.FormatUtils
@@ -49,7 +50,7 @@ internal fun KeystoreInfoDialog(
 ) {
     val corners = LocalMorpheCorners.current
     val font = LocalMorpheFont.current
-    val borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)
+    val borderColor = MorpheOutline.subtleColor()
 
     val locale = currentLocale()
     val info = remember(keystorePath, password, alias, entryPassword, locale) {

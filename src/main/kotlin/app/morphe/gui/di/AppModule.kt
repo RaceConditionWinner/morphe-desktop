@@ -23,6 +23,7 @@ import app.morphe.gui.ui.screens.patches.PatchesViewModel
 import app.morphe.gui.ui.screens.patching.PatchingViewModel
 import app.morphe.gui.ui.screens.quick.QuickPatchViewModel
 import app.morphe.gui.util.Logger as MorpheLogger
+import app.morphe.gui.util.DeviceMonitor
 import app.morphe.gui.util.PatchService
 import app.morphe.gui.util.PatchedAppRecorder
 import io.ktor.client.*
@@ -106,6 +107,11 @@ val appModule = module {
     single { ChangelogRepository(get<HttpClient>()) }
     single { AvatarRepository(get()) }
     single { PatchedAppStore.shared }
+    // The app has exactly one AdbManager, owned by DeviceMonitor (it's the thing actually
+    // running the daemon-ownership/polling logic) and shared from here rather than
+    // constructed fresh — see DeviceMonitor.adbManager's doc for why a second instance
+    // would silently desync from the first.
+    single { DeviceMonitor.adbManager }
     single {
         val configRepository = get<ConfigRepository>()
         OriginalApkRepository(isRetentionEnabled = { configRepository.loadConfig().saveOriginalApks })
@@ -115,7 +121,7 @@ val appModule = module {
     // ViewModels (ScreenModels)
     // ViewModels observe PatchSourceManager.sourceVersion and reload on source changes.
     factory {
-        HomeViewModel(get(), get(), get(), get(), get(), get(), get())
+        HomeViewModel(get(), get(), get(), get(), get(), get(), get(), get())
     }
     factory {
         QuickPatchViewModel(get(), get(), get(), get(), get(), get())

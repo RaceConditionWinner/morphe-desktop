@@ -273,6 +273,7 @@
     <string name="home_app_row_modified_badge">Modified</string>
     <string name="home_app_row_apk_missing_badge">APK missing</string>
     <string name="home_app_row_section_patches_from">Patches from</string>
+    <string name="home_app_row_section_already_installed">Already on your device</string>
 
     <!-- Home Screen - SupportedAppsListPane -->
     <string name="home_list_load_failed">Load failed</string>
@@ -915,6 +916,7 @@
     <string name="installed_info_not_patched_title">Unpatched version installed</string>
     <string name="installed_info_not_patched_description">Something other than Morphe's build holds this package name. Patch again to put it back.</string>
     <string name="installed_info_unverified_notice">Morphe could not confirm that the app on the device is the build it produced.</string>
+    <string name="installed_info_artifact_unverified_notice">Morphe could not confirm this file's contents against the build it produced — its size still matches, but the check itself failed. Try again, or repatch if this keeps happening.</string>
     <string name="installed_info_uninstalled_title">Not on the device</string>
     <string name="installed_info_uninstalled_description">The patched APK is still here, so it can be installed again without patching.</string>
     <string name="installed_info_patch_update_title">Patch update available</string>

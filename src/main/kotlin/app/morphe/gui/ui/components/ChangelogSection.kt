@@ -34,6 +34,7 @@ import app.morphe.gui.data.repository.ChangelogLoad
 import app.morphe.gui.data.repository.ChangelogRepository
 import app.morphe.gui.data.repository.ChangelogRequest
 import app.morphe.gui.ui.icons.MorpheIcons
+import app.morphe.gui.ui.theme.MorpheOutline
 import app.morphe.gui.ui.theme.LocalMorpheFont
 import app.morphe.gui.util.ChangelogEntry
 import app.morphe.gui.util.withVersionPrefix
@@ -154,7 +155,7 @@ fun OlderChangelogExpander(
         if (!expanded) {
             HorizontalDivider(
                 modifier = Modifier.padding(vertical = 12.dp),
-                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f),
+                color = MorpheOutline.subtleColor(),
             )
             Text(
                 text = stringResource(Res.string.changelog_show_older_button),
@@ -166,7 +167,7 @@ fun OlderChangelogExpander(
             )
         } else {
             Spacer(Modifier.height(8.dp))
-            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+            HorizontalDivider(color = MorpheOutline.subtleColor())
             Spacer(Modifier.height(8.dp))
             when (val current = state) {
                 SectionState.Idle -> Unit

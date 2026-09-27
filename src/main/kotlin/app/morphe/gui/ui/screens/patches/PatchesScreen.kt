@@ -51,6 +51,7 @@ import app.morphe.gui.ui.components.handCursor
 import app.morphe.gui.ui.components.morpheScrollbarStyle
 import app.morphe.gui.ui.icons.MorpheIcons
 import app.morphe.gui.ui.icons.autoMirrored
+import app.morphe.gui.ui.theme.MorpheOutline
 import app.morphe.gui.ui.theme.LocalMorpheAccents
 import app.morphe.gui.ui.theme.LocalMorpheCorners
 import app.morphe.gui.ui.theme.LocalMorpheFont
@@ -120,7 +121,7 @@ fun PatchesScreenContent(viewModel: PatchesViewModel) {
         )
     }
 
-    val dividerColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.08f)
+    val dividerColor = MorpheOutline.disabledColor()
 
     Column(
         modifier = Modifier
@@ -307,7 +308,7 @@ fun PatchesScreenContent(viewModel: PatchesViewModel) {
                                 onClick = { viewModel.loadReleases() },
                                 modifier = Modifier.handCursor(),
                                 shape = RoundedCornerShape(corners.small),
-                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)),
+                                border = MorpheOutline.neutral(),
                                 colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant)
                             ) {
                                 Text(
@@ -687,7 +688,7 @@ private fun BottomActionBar(
     val corners = LocalMorpheCorners.current
     val font = LocalMorpheFont.current
     val accents = LocalMorpheAccents.current
-    val dividerColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.08f)
+    val dividerColor = MorpheOutline.disabledColor()
 
     Column(
         modifier = Modifier

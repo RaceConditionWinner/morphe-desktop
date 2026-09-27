@@ -33,6 +33,7 @@ import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.morphe.gui.ui.theme.MorpheOutline
 import app.morphe.gui.ui.theme.LocalMorpheAccents
 import app.morphe.gui.ui.theme.LocalMorpheCorners
 import app.morphe.gui.ui.theme.LocalMorpheFont
@@ -57,7 +58,7 @@ fun FormattedReleaseNotes(markdown: String, modifier: Modifier = Modifier) {
             if (index > 0) {
                 HorizontalDivider(
                     modifier = Modifier.padding(vertical = 12.dp),
-                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f),
+                    color = MorpheOutline.subtleColor(),
                     thickness = 1.dp,
                 )
             }

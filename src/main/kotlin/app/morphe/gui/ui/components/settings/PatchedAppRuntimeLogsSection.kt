@@ -36,6 +36,7 @@ import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
+import org.koin.compose.koinInject
 
 private sealed interface RuntimeLogsStatus {
     data object Idle : RuntimeLogsStatus
@@ -59,7 +60,8 @@ internal fun PatchedAppRuntimeLogsSection(
     val monitorState by DeviceMonitor.state.collectAsState()
     val selectedDevice = monitorState.selectedDevice
     val scope = rememberCoroutineScope()
-    val adbManager = remember { AdbManager() }
+    // Shared with DeviceMonitor's own polling — see DeviceMonitor.adbManager's doc.
+    val adbManager = koinInject<AdbManager>()
     var status by remember { mutableStateOf<RuntimeLogsStatus>(RuntimeLogsStatus.Idle) }
 
     val isWorking = status is RuntimeLogsStatus.Clearing || status is RuntimeLogsStatus.Saving

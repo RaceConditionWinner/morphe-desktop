@@ -37,6 +37,7 @@ import app.morphe.gui.ui.components.settings.AdvancedTab
 import app.morphe.gui.ui.components.settings.AppearanceTab
 import app.morphe.gui.ui.components.settings.SystemTab
 import app.morphe.gui.ui.icons.MorpheIcons
+import app.morphe.gui.ui.theme.MorpheOutline
 import app.morphe.gui.ui.theme.LocalMorpheCorners
 import app.morphe.gui.ui.theme.LocalMorpheFont
 import app.morphe.gui.ui.theme.ThemePreference
@@ -82,7 +83,7 @@ fun SettingsDialog(
 ) {
     val corners = LocalMorpheCorners.current
     val font = LocalMorpheFont.current
-    val borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)
+    val borderColor = MorpheOutline.subtleColor()
     var selectedCategory by remember { mutableStateOf("Appearance") }
     val contentScroll = remember(selectedCategory) { ScrollState(0) }
     var showChangelogDialog by remember { mutableStateOf(false) }
