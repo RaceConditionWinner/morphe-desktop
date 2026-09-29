@@ -157,6 +157,14 @@ val appModule = module {
             params.get(),
             params.get(),
             isClone = params.get(),
+            // Explicit, not left to its default: SeenPatchesRepository keeps an
+            // in-memory cache and its own mutex, both scoped to the instance,
+            // not the file — a second, un-injected instance (what the default
+            // `SeenPatchesRepository()` would silently create here, every time
+            // this factory runs) can race the shared one on a concurrent
+            // load-mutate-save cycle and lose a write, the same way AdbManager's
+            // missing Koin wiring desynced its daemon-ownership state.
+            seenPatchesRepository = get(),
             sourceIdsByName = psm.getEnabledSourcesSync().associate { it.name to it.id },
         )
     }

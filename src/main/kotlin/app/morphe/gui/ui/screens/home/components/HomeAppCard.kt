@@ -40,6 +40,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -77,6 +78,7 @@ import app.morphe.gui.util.withVersionPrefix
 import app.morphe.morphe_desktop.generated.resources.*
 import org.koin.compose.koinInject
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 
 /**
@@ -542,12 +544,17 @@ private fun VersionCardChip(
     nullLabel: String,
 ) {
     val uriHandler = LocalUriHandler.current
+    val scope = rememberCoroutineScope()
     val shown = version?.withVersionPrefix() ?: nullLabel
     MorpheCardChip(
         text = "$channelLabel · $shown",
         icon = if (downloadUrl != null) MorpheIcons.OpenInNew else null,
         onClick = downloadUrl?.let {
-            { openUrlAndFollowRedirects(it) { resolved -> uriHandler.openUri(resolved) } }
+            {
+                scope.launch {
+                    openUrlAndFollowRedirects(it) { resolved -> uriHandler.openUri(resolved) }
+                }
+            }
         },
     )
 }

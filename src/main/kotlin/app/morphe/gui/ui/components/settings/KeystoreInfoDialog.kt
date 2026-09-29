@@ -227,6 +227,9 @@ internal fun readKeystoreInfo(
             )
         }
     } catch (_: Exception) {
+        // BC ships transitively with the patcher; if it's genuinely missing, every
+        // keystore type below still gets tried, and BKS just fails like any other
+        // read error would — nothing here needs to abort early over it.
     }
 
     // Try multiple keystore types: BKS (what Morphe generates), then JKS, then PKCS12

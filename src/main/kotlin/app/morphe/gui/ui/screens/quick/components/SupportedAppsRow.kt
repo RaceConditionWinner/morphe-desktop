@@ -38,6 +38,7 @@ import app.morphe.gui.ui.icons.MorpheIcons
 import app.morphe.gui.ui.theme.MorpheOutline
 import app.morphe.gui.ui.theme.*
 import app.morphe.gui.util.DownloadUrlResolver.openUrlAndFollowRedirects
+import kotlinx.coroutines.launch
 import app.morphe.morphe_desktop.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 
@@ -321,12 +322,15 @@ internal fun SupportedAppsRow(
                                     } else {
                                         app.recommendedVersion
                                     }
+                                    val downloadScope = rememberCoroutineScope()
                                     MorpheCardChip(
                                         text = versionToDisplay?.let { "v$it" } ?: stringResource(Res.string.download),
                                         icon = MorpheIcons.OpenInNew,
                                     ) {
-                                        openUrlAndFollowRedirects(url) { resolved ->
-                                            uriHandler.openUri(resolved)
+                                        downloadScope.launch {
+                                            openUrlAndFollowRedirects(url) { resolved ->
+                                                uriHandler.openUri(resolved)
+                                            }
                                         }
                                     }
                                 }

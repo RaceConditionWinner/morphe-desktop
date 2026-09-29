@@ -14,12 +14,18 @@ import kotlinx.serialization.descriptors.buildClassSerialDescriptor
 import kotlinx.serialization.descriptors.element
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
+import kotlinx.serialization.json.JsonDecoder
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonEncoder
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.int
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 @ExperimentalSerializationApi
 @Serializable(with = PatchSerializer::class)
@@ -102,6 +108,24 @@ object PatchSerializer : KSerializer<SerializablePatch> {
     }
 
     override fun deserialize(decoder: Decoder): SerializablePatch {
-        TODO("Not yet implemented")
+        require(decoder is JsonDecoder) { "PatchSerializer can only deserialize JSON" }
+
+        val obj = decoder.decodeJsonElement().jsonObject
+        val name = obj["name"]?.jsonPrimitive?.contentOrNull
+        val index = obj["index"]?.takeIf { it !is JsonNull }?.jsonPrimitive?.int
+        require(name != null || index != null) {
+            "Either name or index must be present for a Patch."
+        }
+
+        // Mirrors serialize's own wire format exactly: options is written as
+        // [{"key": ..., "value": ...}, ...], not a plain JSON object, so that's
+        // the shape read back here too.
+        val options = obj["options"]?.jsonArray?.associate { entry ->
+            val pair = entry.jsonObject
+            val key = pair.getValue("key").jsonPrimitive.content
+            key to pair.getValue("value")
+        } ?: emptyMap()
+
+        return SerializablePatch(name = name, index = index, options = options)
     }
 }

@@ -103,7 +103,7 @@ internal object InstallCommand : Runnable {
         commands.forEach { argv ->
             val cmd = argv.joinToString(" ")
             val process = device.shellProcessBuilder(cmd).start()
-            val out = process.inputStream.bufferedReader().readText().trim()
+            val out = process.inputStream.bufferedReader().use { it.readText() }.trim()
             val exit = process.waitFor()
             if (exit != 0 || out.contains("Error", true) || out.contains("Failure", true)) {
                 logger.severe("Link command failed: $cmd -> ${out.ifBlank { "exit $exit" }}")

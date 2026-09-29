@@ -145,7 +145,7 @@ class AdbManager {
                 .redirectErrorStream(true)
                 .start()
 
-            val result = process.inputStream.bufferedReader().readText().trim()
+            val result = process.inputStream.bufferedReader().use { it.readText() }.trim()
             process.waitFor()
 
             if (process.exitValue() == 0 && result.isNotEmpty()) {
@@ -205,7 +205,7 @@ class AdbManager {
             val process = ProcessBuilder(adb, "start-server")
                 .redirectErrorStream(true)
                 .start()
-            process.inputStream.bufferedReader().readText() // drain so the child exits cleanly
+            process.inputStream.bufferedReader().use { it.readText() } // drain so the child exits cleanly
             val exitCode = process.waitFor()
             if (exitCode != 0) {
                 return@withContext Result.failure(
@@ -247,7 +247,7 @@ class AdbManager {
             val process = ProcessBuilder(adb, "kill-server")
                 .redirectErrorStream(true)
                 .start()
-            val output = process.inputStream.bufferedReader().readText()
+            val output = process.inputStream.bufferedReader().use { it.readText() }
             val exitCode = process.waitFor()
             if (exitCode != 0) {
                 Logger.warn("adb kill-server exited with code $exitCode: $output")
@@ -280,7 +280,7 @@ class AdbManager {
                 .redirectErrorStream(true)
                 .start()
 
-            val output = process.inputStream.bufferedReader().readText()
+            val output = process.inputStream.bufferedReader().use { it.readText() }
             val exitCode = process.waitFor()
 
             if (exitCode != 0) {
@@ -393,10 +393,12 @@ class AdbManager {
 
                 // Read output in real-time
                 val output = StringBuilder()
-                process.inputStream.bufferedReader().forEachLine { line ->
-                    output.appendLine(line)
-                    onProgress(line)
-                    Logger.debug("ADB: $line")
+                process.inputStream.bufferedReader().use { reader ->
+                    reader.forEachLine { line ->
+                        output.appendLine(line)
+                        onProgress(line)
+                        Logger.debug("ADB: $line")
+                    }
                 }
 
                 val exitCode = process.waitFor()
@@ -445,7 +447,7 @@ class AdbManager {
             val process = ProcessBuilder(adb, "-s", deviceId, "uninstall", packageName)
                 .redirectErrorStream(true)
                 .start()
-            val output = process.inputStream.bufferedReader().readText().trim()
+            val output = process.inputStream.bufferedReader().use { it.readText() }.trim()
             val exitCode = process.waitFor()
             Logger.info("uninstall $packageName on $deviceId -> exit $exitCode: $output")
 
@@ -477,7 +479,7 @@ class AdbManager {
             val main = ProcessBuilder(adb, "-s", deviceId, "logcat", "-c")
                 .redirectErrorStream(true)
                 .start()
-            val mainOutput = main.inputStream.bufferedReader().readText()
+            val mainOutput = main.inputStream.bufferedReader().use { it.readText() }
             if (main.waitFor() != 0) {
                 return@withContext Result.failure(AdbException("Failed to clear logcat: $mainOutput", Res.string.adb_error_clear_logs, listOf(mainOutput)))
             }
@@ -487,7 +489,7 @@ class AdbManager {
                 val crash = ProcessBuilder(adb, "-s", deviceId, "logcat", "-b", "crash", "-c")
                     .redirectErrorStream(true)
                     .start()
-                crash.inputStream.bufferedReader().readText()
+                crash.inputStream.bufferedReader().use { it.readText() }
                 crash.waitFor()
             } catch (_: Exception) { /* older devices may not have crash buffer */ }
 
@@ -622,7 +624,7 @@ class AdbManager {
                 val process = ProcessBuilder(listOf(adb, "-s", deviceId, "shell") + argv)
                     .redirectErrorStream(true)
                     .start()
-                val output = process.inputStream.bufferedReader().readText().trim()
+                val output = process.inputStream.bufferedReader().use { it.readText() }.trim()
                 val exitCode = process.waitFor()
                 Logger.debug("ADB shell ${argv.joinToString(" ")} -> exit $exitCode${if (output.isNotBlank()) ": $output" else ""}")
                 if (exitCode != 0 ||
@@ -653,7 +655,7 @@ class AdbManager {
         try {
             val process = ProcessBuilder(adb, "-s", deviceId, "shell", "pm", "list", "packages")
                 .redirectErrorStream(true).start()
-            val out = process.inputStream.bufferedReader().readText()
+            val out = process.inputStream.bufferedReader().use { it.readText() }
             process.waitFor()
             if (process.exitValue() != 0) return@withContext Result.failure(AdbException("Failed to list packages: exit code ${process.exitValue()}", Res.string.adb_error_pm_list_packages, listOf("exit code ${process.exitValue()}")))
             val packages = out.lineSequence()
@@ -683,7 +685,7 @@ class AdbManager {
         try {
             val process = ProcessBuilder(adb, "-s", deviceId, "shell", "pm", "list", "packages", "-f")
                 .redirectErrorStream(true).start()
-            val out = process.inputStream.bufferedReader().readText()
+            val out = process.inputStream.bufferedReader().use { it.readText() }
             process.waitFor()
             if (process.exitValue() != 0) return@withContext Result.failure(AdbException("Failed to list packages: exit code ${process.exitValue()}", Res.string.adb_error_pm_list_packages, listOf("exit code ${process.exitValue()}")))
             // Each line: package:/data/app/~~hash==/pkg.name-hash==/base.apk=pkg.name
@@ -759,7 +761,7 @@ class AdbManager {
         try {
             val process = ProcessBuilder(adb, "-s", deviceId, "shell", "dumpsys", "package", pkg)
                 .redirectErrorStream(true).start()
-            val out = process.inputStream.bufferedReader().readText()
+            val out = process.inputStream.bufferedReader().use { it.readText() }
             process.waitFor()
             out.ifBlank { null }
         } catch (e: Exception) {
@@ -820,7 +822,7 @@ class AdbManager {
             val process = ProcessBuilder(adbPath, "-s", deviceId, "shell", "getprop", "ro.product.model")
                 .redirectErrorStream(true)
                 .start()
-            val result = process.inputStream.bufferedReader().readText().trim()
+            val result = process.inputStream.bufferedReader().use { it.readText() }.trim()
             process.waitFor()
             if (process.exitValue() == 0 && result.isNotBlank()) result else null
         } catch (e: Exception) {
@@ -836,7 +838,7 @@ class AdbManager {
             val process = ProcessBuilder(adbPath, "-s", deviceId, "shell", "getprop", "ro.product.cpu.abi")
                 .redirectErrorStream(true)
                 .start()
-            val result = process.inputStream.bufferedReader().readText().trim()
+            val result = process.inputStream.bufferedReader().use { it.readText() }.trim()
             process.waitFor()
             if (process.exitValue() == 0 && result.isNotBlank()) result else null
         } catch (e: Exception) {

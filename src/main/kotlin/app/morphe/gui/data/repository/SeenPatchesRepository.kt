@@ -6,6 +6,7 @@
 package app.morphe.gui.data.repository
 
 import app.morphe.gui.util.FileUtils
+import app.morphe.gui.util.Logger
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
@@ -46,7 +47,6 @@ import kotlinx.serialization.json.Json
 class SeenPatchesRepository(
     private val file: File = File(FileUtils.getAppDataDir(), "seen-patches.json"),
 ) {
-    private val logger = java.util.logging.Logger.getLogger(SeenPatchesRepository::class.java.name)
     private val json = Json { ignoreUnknownKeys = true; prettyPrint = true; encodeDefaults = true }
     private val mutex = Mutex()
 
@@ -67,7 +67,7 @@ class SeenPatchesRepository(
                     json.decodeFromString<Map<String, Map<String, List<String>>>>(text)
                         .mapValues { (_, v) -> v.toMutableMap() }.toMutableMap()
                 }.getOrElse {
-                    logger.warning("Could not read seen-patches.json, starting empty: ${it.message}")
+                    Logger.warn("Could not read seen-patches.json, starting empty: ${it.message}")
                     mutableMapOf()
                 }
             }
@@ -109,7 +109,7 @@ class SeenPatchesRepository(
             }
             cache = all.mapValues { (_, v) -> v.toMutableMap() }.toMutableMap()
         } catch (e: Exception) {
-            logger.warning("Could not write seen-patches.json: ${e.message}")
+            Logger.warn("Could not write seen-patches.json: ${e.message}")
         }
     }
 

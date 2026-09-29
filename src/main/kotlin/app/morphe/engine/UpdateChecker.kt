@@ -32,6 +32,7 @@ object UpdateChecker {
      * Synchronous — call from a background dispatcher.
      */
     fun checkInfo(logger: Logger, channel: ReleaseChannel? = null): UpdateInfo? {
+        var connection: HttpURLConnection? = null
         try {
             val currentVersion = javaClass.getResourceAsStream("/app/morphe/cli/version.properties")
                 ?.use { stream ->
@@ -50,7 +51,7 @@ object UpdateChecker {
                     "https://raw.githubusercontent.com/MorpheApp/morphe-desktop/refs/heads/main/gradle.properties"
             }
 
-            val connection = URI(url).toURL().openConnection() as HttpURLConnection
+            connection = URI(url).toURL().openConnection() as HttpURLConnection
             connection.connectTimeout = 3000
             connection.readTimeout = 3000
 
@@ -76,6 +77,8 @@ object UpdateChecker {
         } catch (ex: Exception) {
             logger.fine("Could not check for CLI update: $ex")
             return null
+        } finally {
+            connection?.disconnect()
         }
     }
 
